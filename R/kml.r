@@ -2,6 +2,179 @@
 
 ## -- crear archivos kml --
 
+#' Elemento
+#' @description Construye un elemento XML
+#' @details No valida la gramática del nombre del elemento
+#' @param tag character: nombre del elemento
+#' @param val character o numeric: valor del elemento
+#' @param atr lista: lista de con los atributos
+#' @param as_xml logical: devuelve lista u objeto xml_node (TRUE
+#'     por omisión)
+#' @return lista u objeto xml_node
+#' @examples
+#' node_element("point")
+#' node_element("name", val = "elemento", atr = list(id = "5001"))
+#' @export
+node_element <- function(tag = character(), val = "", atr = list(),
+                           as_xml = TRUE) {
+
+    stopifnot("tag inválido" = filled_char(tag),
+              "val inválido" = filled_char(val) || filled_num(val),
+              "atr inválido" = is.list(atr))
+    
+    x <- list(val)
+    attributes(x) <- atr
+    
+    x <- structure(list(x), names = tag)
+
+    if (as_xml) x <- as_xml_document(x)
+    invisible(x)
+}
+
+#' Elementos
+#' @description Lista de elementos con mismo nombre
+#' @details Utiliza purrr::map2 para generar un grupo de elementos
+#' @param tag character: nombre del elemento
+#' @param val lista de character o numeric: valores de los elementos
+#' @param atr lista: lista de listas con atributos
+#' @param as_xml logical: devuelve lista u objeto xml_node (TRUE
+#'     por omisión)
+#' @return lista u objeto xml_node
+#' @examples
+#' aa <- node_set_element("name", 1:3,
+#'                        list(list(id = "a"), list(id = "b"),
+#'                             list(id = "c")))
+#' @export
+node_set_element <- function(tag = character(), val = "", atr = list(),
+                                as_xml = TRUE) {
+
+    purrr::map2(val, atr, node_element, tag = tag, as_xml = as_xml)
+}
+
+#' Elementos
+#' @description Lista de elementos con mismo nombre
+#' @details Alternativa a \code{node_set_element} si se utiliza
+#'     \code{purrr::partial} para inicializar el parámetro \code{tag}
+#'     o \code{as_xml}
+#' @param fun_element function: función que determina al elemento
+#' @param val lista de character o numeric: valores de los elementos
+#' @param atr lista: lista de listas con atributos
+#' @param as_xml logical: devuelve lista u objeto xml_node (TRUE por
+#'     omisión)
+#' @return lista u objeto xml_node
+#' @examples
+#' fufu <- purrr::partial(node_element, tag = "name")
+#' aa <- node_set_element_p(fufu, 1:3,
+#'                          list(list(id = "a"), list(id = "b"),
+#'                               list(id = "c")))
+#' @export
+node_set_element_p <- function(fun_element, val, atr) {
+    purrr::map2(val, atr, fun_element)
+}
+
+## -- construir nodos con hijos
+##    elaborando listas y luego as_xml_document
+
+## sólo argumentos val y atr, pasados en lista
+node_nodes <- function(fun_node, arg) {
+    map2(fun_node, arg, function(f, x) {
+        if (is.function(f)) {
+            f(x$val, x$atr)
+        } else {
+            node_nodes(f, x)
+        }})
+}
+
+
+## abstracción
+## lista de funciones de los nodos hijos pasada como argumento
+node_padre_hijo <- function(fun_hijo, padre, hijo) {
+    ## validar argumentos
+    nf <- node_nodes(fun_hijo, list(hijo))
+    if (filled_list(padre["atr"])) {
+        atr <- c(padre$atr, list(names = names(nf[[1]])))
+        attributes(nf[[1]]) <- atr
+    }
+    nf
+}
+
+node_name <- purrr::partial(node_element, tag = "name",
+                            as_xml = FALSE)
+node_open <- purrr::partial(node_element, tag = "open",
+                            as_xml = FALSE)
+node_visibility <- purrr::partial(node_element, tag = "visibility",
+                                  as_xml = FALSE)
+node_snippet <- purrr::partial(node_element, tag = "Snippet",
+                               as_xml = FALSE)
+node_style_url <- purrr::partial(node_element, tag = "styleUrl",
+                            as_xml = FALSE)
+node_value <- purrr::partial(node_element, tag = "value",
+                             as_xml = FALSE)
+node_display_name <- purrr::partial(node_element,
+                                    tag = "displayName",
+                                    as_xml = FALSE)
+
+
+node_coordinates <- function(x, y) {
+    node_element(tag = "coordinates", val = paste(x, y, sep = ","),
+                 as_xml = FALSE)
+}
+
+node_point <- function(x, y) {
+    list(Point = node_coordinates(x, y))
+}
+
+node_display_name_cdata <- function(val, atr) {
+    node_element(tag = "displayName",
+                 val = paste0("<![CDATA[", val, "]]>"),
+                 as_xml = FALSE)
+}
+
+## displayName?
+node_data <- function(value, data_name = list(), disp_name = "") {
+    ## atr_data debe ser lista nombrada
+    if (nzchar(disp_name)) {
+        node_padre_hijo(list(Data = list(node_value,
+                                         node_display_name)),
+                        list(val = "", atr = data_name),
+                        list(list(val = value, atr = list()),
+                             list(val = disp_name, atr = list())))
+
+    } else {
+        node_padre_hijo(list(Data = node_value),
+                        list(val = "", atr = data_name),
+                        list(val = value, atr = list()))
+    }
+}
+
+
+aa <- node_data(10, list(name = "si"))
+fuu(aa)
+
+aa <- node_data(10, list(name = "si"), "$dato")
+
+node_data_set <- function(values, data_names) {
+    ## atrs_data: lista de listas
+    ## values: lista
+    node_set_element(node_data, values, data_names)
+}
+
+
+aa <- node_data_set(list(1, 2, 3), list(list(name = "a"),
+                                        list(name = "b"),
+                                        list(name = "c")))
+
+
+## displayNames?
+node_extended_data <- function(values, data_names) {
+    list(ExtendedData = map2(values, data_names, node_data))
+}
+
+aa <- node_extended_data(list(1, 2, 3),
+                         list(list(name = "a"),
+                              list(name = "b"),
+                              list(name = "c")))
+
 #' Ícono GE
 #' @description url de los íconos más comunes de google-earth
 #' @details Hay muchos íconos que ofrece GE para señalar la posición
@@ -314,167 +487,6 @@ sty_sty <- function(id = character(), icon = NULL,
     invisible(w)
 }
 
-## ...: name, Snippet, visibility, open
-kml_root <- function(..., as_xml = TRUE) {
-
-    nodes <- c("name", "Snippet", "visibility", "open")
-    z <- list(list(name = list("root")),
-              list(Snippet = list("root")),
-              list(visibility = list(0)),
-              list(open = list(0)))
-    
-    y <- dots_values_as_list(...)
-    if (filled(y)) {
-        ny <- names(y)
-        iy <- which(ny %in% nodes)
-        if (filled(iy)) {
-            y <- lapply(iy, function(x) y[x])
-            iz <- which(nodes %in% ny)
-            z[iz] <- y
-        }
-    }
-
-    w <- list(Document = structure(z, id = "id_root"))
-    if (as_xml) w <- as_xml_document(w)
-    invisible(w)
-}
-
-node_element <- function(tag = character(), val = "", atr = list(),
-                           as_xml = TRUE) {
-    ## tag es character escalar, no vacío
-    ## atr es lista
-    ## val es escalar, vector atómico
-    x <- list(val)
-    attributes(x) <- atr
-    
-    x <- structure(list(x), names = tag)
-
-    if (as_xml) x <- as_xml_document(x)
-    invisible(x)
-}
-
-
-
-node_set_element <- function(tag = character(), val = "", atr = list(),
-                                as_xml = TRUE) {
-
-    purrr::map2(val, atr, node_element, tag = tag, as_xml = as_xml)
-}
-
-aa <- node_set_element("name", 1:3,
-                      list(list(id = "a"), list(id = "b"),
-                           list(id = "c")))
-
-length(aa)
-as.character(aa[[2]])
-
-## alt. si partial tag, as_xml
-node_set_element <- function(fun_element, val, atr) {
-    purrr::map2(val, atr, fun_element)
-}
-
-## -- construir nodos con hijos
-##    elaborando listas y luego as_xml_document
-
-## sólo argumentos val y atr, pasados en lista
-node_nodes <- function(fun_node, arg) {
-    map2(fun_node, arg, function(f, x) {
-        if (is.function(f)) {
-            f(x$val, x$atr)
-        } else {
-            node_nodes(f, x)
-        }})
-}
-
-## abstracción
-## lista de funciones de los nodos hijos pasada como argumento
-node_padre_hijo <- function(fun_hijo, padre, hijo) {
-    ## validar argumentos
-    nf <- node_nodes(fun_hijo, list(hijo))
-    if (filled_list(padre["atr"])) {
-        atr <- c(padre$atr, list(names = names(nf[[1]])))
-        attributes(nf[[1]]) <- atr
-    }
-    nf
-}
-
-
-
-node_name <- purrr::partial(node_element, tag = "name",
-                            as_xml = FALSE)
-node_open <- purrr::partial(node_element, tag = "open",
-                            as_xml = FALSE)
-node_visibility <- purrr::partial(node_element, tag = "visibility",
-                                  as_xml = FALSE)
-node_snippet <- purrr::partial(node_element, tag = "Snippet",
-                               as_xml = FALSE)
-node_style_url <- purrr::partial(node_element, tag = "styleUrl",
-                            as_xml = FALSE)
-node_value <- purrr::partial(node_element, tag = "value",
-                             as_xml = FALSE)
-node_display_name <- purrr::partial(node_element,
-                                    tag = "displayName",
-                                    as_xml = FALSE)
-
-
-
-node_coordinates <- function(x, y) {
-    node_element(tag = "coordinates", val = paste(x, y, sep = ","),
-                 as_xml = FALSE)
-}
-
-node_point <- function(x, y) {
-    list(Point = node_coordinates(x, y))
-}
-
-node_display_name_cdata <- function(val, atr) {
-    node_element(tag = "displayName",
-                 val = paste0("<![CDATA[", val, "]]>"),
-                 as_xml = FALSE)
-}
-
-## displayName?
-node_data <- function(value, data_name = list(), disp_name = "") {
-    ## atr_data debe ser lista nombrada
-    if (nzchar(disp_name)) {
-        node_padre_hijo(list(Data = list(node_value,
-                                         node_display_name)),
-                        list(val = "", atr = data_name),
-                        list(list(val = value, atr = list()),
-                             list(val = disp_name, atr = list())))
-
-    } else {
-        node_padre_hijo(list(Data = node_value),
-                        list(val = "", atr = data_name),
-                        list(val = value, atr = list()))
-    }
-}
-
-aa <- node_data(10, list(name = "si"))
-fuu(aa)
-
-aa <- node_data(10, list(name = "si"), "$dato")
-
-node_data_set <- function(values, data_names) {
-    ## atrs_data: lista de listas
-    ## values: lista
-    node_set_element(node_data, values, data_names)
-}
-
-
-aa <- node_data_set(list(1, 2, 3), list(list(name = "a"),
-                                        list(name = "b"),
-                                        list(name = "c")))
-
-## displayNames?
-node_extended_data <- function(values, data_names) {
-    list(ExtendedData = map2(values, data_names, node_data))
-}
-
-aa <- node_extended_data(list(1, 2, 3),
-                         list(list(name = "a"),
-                              list(name = "b"),
-                              list(name = "c")))
 
 ## recibe lista con los datos de un lugar
 ## - el nombre del dato en la lista sirve para mapear
@@ -538,8 +550,6 @@ node_placemark <- function(..., id = "") {
     invisible(pm)
 }
 
-
-
 ## produce nodo Folder
 ## recibe data.frame con los datos de los puntos
 ## para generar los nodos placemark
@@ -588,3 +598,28 @@ node_folder <- function(id = "", name = "", open = 0L,
 }
 
 
+## ...: name, Snippet, visibility, open
+kml_root <- function(..., as_xml = TRUE) {
+
+    nodes <- c("name", "Snippet", "visibility", "open")
+    z <- list(list(name = list("root")),
+              list(Snippet = list("root")),
+              list(visibility = list(0)),
+              list(open = list(0)))
+    
+    y <- list(...)
+    if (filled_list(y)) {
+        z <- remplazar(z, names(z), names(y), y)
+        ## ny <- names(y)
+        ## iy <- which(ny %in% nodes)
+        ## if (filled(iy)) {
+        ##     y <- lapply(iy, function(x) y[x])
+        ##     iz <- which(nodes %in% ny)
+        ##     z[iz] <- y
+        ## }
+    }
+
+    w <- list(Document = structure(z, id = "id_root"))
+    if (as_xml) w <- as_xml_document(w)
+    invisible(w)
+}
