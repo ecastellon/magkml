@@ -2,6 +2,9 @@
 
 ## -- crear archivos kml --
 
+## comprobar el crs del archivo con las coordenadas
+## transformar de UTM a lon-lat
+
 #' Elemento
 #' @description Construye un elemento XML
 #' @details No valida la gramática del nombre del elemento
@@ -39,16 +42,21 @@ node_element <- function(tag = character(), val = "", atr = list(),
 #' @param atr lista: lista de listas con atributos
 #' @param as_xml logical: devuelve lista u objeto xml_node (TRUE
 #'     por omisión)
-#' @return lista u objeto xml_node
+#' @return lista de listas u objetos xml_node
 #' @examples
 #' aa <- node_set_element("name", 1:3,
-#'                        list(list(id = "a"), list(id = "b"),
-#'                             list(id = "c")))
+#'                         list(list(id = "a"), list(id = "b"),
+#'                              list(id = "c")))
 #' @export
 node_set_element <- function(tag = character(), val = "", atr = list(),
                                 as_xml = TRUE) {
 
-    purrr::map2(val, atr, node_element, tag = tag, as_xml = as_xml)
+    stopifnot("tag no-vale" = filled_char(tag) && is_scalar(tag),
+              "val no-vale" = filled_char(val) || filled_num(val),
+              "atr no-vale" = is.list(atr) && length(val) == length(atr))
+
+    invisible(purrr::map2(val, atr, node_element, tag = tag,
+                          as_xml = as_xml))
 }
 
 #' Elementos
@@ -69,14 +77,28 @@ node_set_element <- function(tag = character(), val = "", atr = list(),
 #'                               list(id = "c")))
 #' @export
 node_set_element_p <- function(fun_element, val, atr) {
-    purrr::map2(val, atr, fun_element)
+    
+    stopifnot("fun no-vale" = is.function(fun_element),
+              "val no-vale" = filled_char(val) || filled_num(val),
+              "atr no-vale" = is.list(atr) && length(val) == length(atr))
+
+    invisible(purrr::map2(val, atr, fun_element))
 }
 
 ## -- construir nodos con hijos
 ##    elaborando listas y luego as_xml_document
 
 ## sólo argumentos val y atr, pasados en lista
-node_nodes <- function(fun_node, arg) {
+
+#' Elementos anidados
+#' @description Nodos anidados en otros
+#' @param fun_node lista de funciones
+#' @param arg lista de par \code{val} (valor nodo) y \code{atr} (lista
+#'     de atributos del nodo)
+#' @return lista de listas o de objetos xml_node
+#' @examples
+#' @keywords internal
+nest_nodes <- function(fun_node, arg) {
     map2(fun_node, arg, function(f, x) {
         if (is.function(f)) {
             f(x$val, x$atr)
@@ -95,7 +117,8 @@ node_padre_hijo <- function(fun_hijo, padre, hijo) {
         atr <- c(padre$atr, list(names = names(nf[[1]])))
         attributes(nf[[1]]) <- atr
     }
-    nf
+    
+    invisible(nf)
 }
 
 node_name <- purrr::partial(node_element, tag = "name",
@@ -114,15 +137,6 @@ node_display_name <- purrr::partial(node_element,
                                     tag = "displayName",
                                     as_xml = FALSE)
 
-
-node_coordinates <- function(x, y) {
-    node_element(tag = "coordinates", val = paste(x, y, sep = ","),
-                 as_xml = FALSE)
-}
-
-node_point <- function(x, y) {
-    list(Point = node_coordinates(x, y))
-}
 
 node_display_name_cdata <- function(val, atr) {
     node_element(tag = "displayName",
@@ -487,6 +501,31 @@ sty_sty <- function(id = character(), icon = NULL,
     invisible(w)
 }
 
+#' Coordenadas
+#' @description Produce el elemento \code{coordinates}
+#' @param x numeric: longitud
+#' @param y numeric: latitud
+#' @return xml_node
+#' @export
+#' @examples
+#' node_coordinates(-80.23, 10.12)
+node_coordinates <- function(x, y) {
+    node_element(tag = "coordinates", val = paste(x, y, sep = ","))
+}
+
+#' Point
+#' @description Produce el elemento \code{Point}
+#' @param x numeric: longitud
+#' @param y numeric: latitud
+#' @return xml_node
+#' @export
+#' @examples
+#' node_point(-80.23, 10.12)
+node_point <- function(x, y) {
+    p <- node_element("Point")
+    xml_add_child(p, node_coordinates(x, y))
+    invisible(p)
+}
 
 ## recibe lista con los datos de un lugar
 ## - el nombre del dato en la lista sirve para mapear
@@ -505,8 +544,8 @@ node_placemark <- function(..., id = "") {
     
     pm <- node_element("Placemark", atr = list(id = id))
 
-    xm <- node_point(x$coordinates$x, x$coordinates$y)
-    xml_add_child(pm, as_xml_document(xm))
+    p <- node_point(x$coordinates$x, x$coordinates$y)
+    xml_add_child(pm, p)
 
     if (is.element("extended_data", nx)) {
         xd <- lapply(names(x$extended_data), function(x){
