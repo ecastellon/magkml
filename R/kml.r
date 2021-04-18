@@ -92,18 +92,19 @@ node_set_element_p <- function(fun_element, val, atr) {
 
 #' Elementos anidados
 #' @description Nodos anidados en otros
+#' @details 
 #' @param fun_node lista de funciones
-#' @param arg lista de par \code{val} (valor nodo) y \code{atr} (lista
+#' @param arg lista del par \code{val} (valor nodo) y \code{atr} (lista
 #'     de atributos del nodo)
 #' @return lista de listas o de objetos xml_node
 #' @examples
 #' @keywords internal
-nest_nodes <- function(fun_node, arg) {
+nest_node <- function(fun_node, arg) {
     map2(fun_node, arg, function(f, x) {
         if (is.function(f)) {
             f(x$val, x$atr)
         } else {
-            node_nodes(f, x)
+            nest_node(f, x)
         }})
 }
 
@@ -121,31 +122,24 @@ node_padre_hijo <- function(fun_hijo, padre, hijo) {
     invisible(nf)
 }
 
-node_name <- purrr::partial(node_element, tag = "name",
-                            as_xml = FALSE)
-node_open <- purrr::partial(node_element, tag = "open",
-                            as_xml = FALSE)
-node_visibility <- purrr::partial(node_element, tag = "visibility",
-                                  as_xml = FALSE)
-node_snippet <- purrr::partial(node_element, tag = "Snippet",
-                               as_xml = FALSE)
-node_style_url <- purrr::partial(node_element, tag = "styleUrl",
-                            as_xml = FALSE)
-node_value <- purrr::partial(node_element, tag = "value",
-                             as_xml = FALSE)
-node_display_name <- purrr::partial(node_element,
-                                    tag = "displayName",
-                                    as_xml = FALSE)
-
-
-node_display_name_cdata <- function(val, atr) {
-    node_element(tag = "displayName",
-                 val = paste0("<![CDATA[", val, "]]>"),
-                 as_xml = FALSE)
-}
+## node_name <- purrr::partial(node_element, tag = "name",
+##                             as_xml = FALSE)
+## node_open <- purrr::partial(node_element, tag = "open",
+##                             as_xml = FALSE)
+## node_visibility <- purrr::partial(node_element, tag = "visibility",
+##                                   as_xml = FALSE)
+## node_snippet <- purrr::partial(node_element, tag = "Snippet",
+##                                as_xml = FALSE)
+## node_style_url <- purrr::partial(node_element, tag = "styleUrl",
+##                             as_xml = FALSE)
+## node_value <- purrr::partial(node_element, tag = "value",
+##                              as_xml = FALSE)
+## node_display_name <- purrr::partial(node_element,
+##                                     tag = "displayName",
+##                                     as_xml = FALSE)
 
 ## displayName?
-node_data <- function(value, data_name = list(), disp_name = "") {
+node_data2 <- function(value, data_name = list(), disp_name = "") {
     ## atr_data debe ser lista nombrada
     if (nzchar(disp_name)) {
         node_padre_hijo(list(Data = list(node_value,
@@ -162,10 +156,10 @@ node_data <- function(value, data_name = list(), disp_name = "") {
 }
 
 
-aa <- node_data(10, list(name = "si"))
-fuu(aa)
+## aa <- node_data(10, list(name = "si"))
+## fuu(aa)
 
-aa <- node_data(10, list(name = "si"), "$dato")
+## aa <- node_data(10, list(name = "si"), "$dato")
 
 node_data_set <- function(values, data_names) {
     ## atrs_data: lista de listas
@@ -174,13 +168,13 @@ node_data_set <- function(values, data_names) {
 }
 
 
-aa <- node_data_set(list(1, 2, 3), list(list(name = "a"),
-                                        list(name = "b"),
-                                        list(name = "c")))
+## aa <- node_data_set(list(1, 2, 3), list(list(name = "a"),
+##                                         list(name = "b"),
+##                                         list(name = "c")))
 
 
 ## displayNames?
-node_extended_data <- function(values, data_names) {
+node_extended_data2 <- function(values, data_names) {
     list(ExtendedData = map2(values, data_names, node_data))
 }
 
@@ -527,6 +521,55 @@ node_point <- function(x, y) {
     invisible(p)
 }
 
+## disp_names es lista nombrada con el nombre del Data
+## es pasado como argumento suplementario para evitar
+## tener que pasarlo en columnas del data.frame con el que
+## se construyen los Placemark. Puede ser xml_cdata o character
+
+node_data <- function(value, data_name, disp_names) {
+    disp_name <- disp_names[[data_name]]
+    stopifnot("sin valor" = filled_char(value) || filled_num(value),
+              "sin atr. name" = filled_char(data_name),
+              "display-name" = filled_char(disp_name) ||
+                  inherits(disp_name, "xml_cdata"))
+    
+    x <- node_element("Data", atr = list(name = data_name))
+
+    y <- NULL
+    if (inherits(disp_name, "xml_cdata")) {
+        y <- node_element("displayName")
+        xml_add_child(y, disp_name)
+    } else {
+        if (nzchar(disp_name)) {
+            y <- node_element("displayName", disp_name)
+        }
+    }
+
+    if (!is.null(y)) {
+        xml_add_child(x, y)
+    }
+    
+    y <- node_element("value", value)
+    xml_add_child(x, y)
+    
+    invisible(x)
+}
+
+## list(value = list(), display_name = list())
+## data es lista con nombre que contiene los datos
+## dname es lista con el formato displayName
+node_extended_data <- function(data, dname) {
+
+    x <- node_element("ExtendedData")
+
+    d <- map2(data, names(data), node_data, disp_name = dname)
+
+    for (nd in d) xml_add_child(x, nd)
+
+    invisible(x)
+}
+
+
 ## recibe lista con los datos de un lugar
 ## - el nombre del dato en la lista sirve para mapear
 ##   el dato con el nodo hijo
@@ -538,10 +581,11 @@ node_placemark <- function(..., id = "") {
     x <- list(...)
     nx <- intersect(c("name", "open", "visibility", "snippet",
                       "description", "style_url", "extended_data",
-                      "coordinates"), names(x))
-    ## si nd es vacío, terminar
-    ## si coordenadas x, y no en la lista, terminar
-    
+                      "display_name", "coordinates"), names(x))
+
+    stopifnot("falta nodo" = filled_char(nx),
+              "sin coordenadas" = en("coordinates", nx))
+        
     pm <- node_element("Placemark", atr = list(id = id))
 
     p <- node_point(x$coordinates$x, x$coordinates$y)
@@ -551,39 +595,55 @@ node_placemark <- function(..., id = "") {
         xd <- lapply(names(x$extended_data), function(x){
             list(name = x)})
         names(x$extended_data) <- NULL
-        xm <- node_extended_data(x$extended_data, xd)
-        xml_add_child(pm, as_xml_document(xm))
+        ## x$extended_data es una lista de lista
+        ## display_name es lista con tantos elementos
+        ## como datos
+        xm <- node_extended_data(x$extended_data, x$display_name)
+        xml_add_child(pm, xm)
     }
     
     ## id <- which(c("name", "open", "visibility", "snippet",
     ##               "description", "style_url",
     ##               "extended_data", "coordinates") %in% names(x))
     if (is.element("name", nx)) {
-        xml_add_child(pm, as_xml_document(node_name(x[["name"]])))
+        xml_add_child(pm, node_name(x$name))
     }
 
     if (is.element("open", nx)) {
-        xml_add_child(pm, node_element("open", x[["open"]]))
+        xml_add_child(pm, node_element("open", x$open))
     }
 
     if (is.element("visibility", nx)) {
         xml_add_child(pm, node_element("visibility",
-                                       x[["visibility"]]))
+                                       x$visibility))
     }
 
     if (is.element("snippet", nx)) {
         xml_add_child(pm, node_element("snippet",
-                                       x[["snippet"]]))
+                                       x$snippet))
     }
 
+    ## cuando description es CDATA?
+    w <- NULL
     if (is.element("description", nx)) {
-        xml_add_child(pm, node_element("description",
-                                       x[["description"]]))
+        w <- NULL
+        if (inherits(x$description, "xml_cdata")) {
+            w <- node_element("description")
+            xml_add_child(w, x$description)
+        } else {
+            if (filled_char(x$description) && nzchar(x$description)) {
+                w <- node_element("description", x$description)
+            }
+        }
+
+        if (inherits(w, "xml_node")) {
+            xml_add_child(pm, w)
+        }
     }
 
     if (is.element("style_url", nx)) {
         xml_add_child(pm, node_element("styleUrl",
-                                       x[["style_url"]]))
+                                       x$style_url))
     }
 
     invisible(pm)
@@ -600,9 +660,11 @@ node_placemark <- function(..., id = "") {
 ## coordinates: columnas del df con las coordenadas
 ## extended_data: ídem data-values
 ## names_data: los atr. name de elem. Data ??
+## styleUrl en Folder no afecta los Placemark
+
 node_folder <- function(id = "", name = "", open = 0L,
                         visibility = 0L, snippet = "",
-                        style_url = "", dpm = NULL) {
+                        dpm = NULL) {
                         ## coordinates = c("x", "y"),
                         ## extended_data = "",
                         ## names_data = "") {
@@ -610,8 +672,7 @@ node_folder <- function(id = "", name = "", open = 0L,
     x <- list(Folder = structure(list(node_name(name),
                                       node_open(open),
                                       node_visibility(visibility),
-                                      node_snippet(snippet),
-                                      node_style_url(style_url)),
+                                      node_snippet(snippet)),
                                  id = id)) %>%
         as_xml_document()
 
@@ -640,7 +701,7 @@ node_folder <- function(id = "", name = "", open = 0L,
 ## ...: name, Snippet, visibility, open
 kml_root <- function(..., as_xml = TRUE) {
 
-    nodes <- c("name", "Snippet", "visibility", "open")
+    ##nodes <- c("name", "Snippet", "visibility", "open")
     z <- list(list(name = list("root")),
               list(Snippet = list("root")),
               list(visibility = list(0)),
