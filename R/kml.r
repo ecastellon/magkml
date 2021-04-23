@@ -178,10 +178,10 @@ node_extended_data2 <- function(values, data_names) {
     list(ExtendedData = map2(values, data_names, node_data))
 }
 
-aa <- node_extended_data(list(1, 2, 3),
-                         list(list(name = "a"),
-                              list(name = "b"),
-                              list(name = "c")))
+## aa <- node_extended_data(list(1, 2, 3),
+##                          list(list(name = "a"),
+##                               list(name = "b"),
+##                               list(name = "c")))
 
 #' Ícono GE
 #' @description url de los íconos más comunes de google-earth
@@ -569,7 +569,6 @@ node_extended_data <- function(data, dname) {
     invisible(x)
 }
 
-
 ## recibe lista con los datos de un lugar
 ## - el nombre del dato en la lista sirve para mapear
 ##   el dato con el nodo hijo
@@ -592,9 +591,9 @@ node_placemark <- function(..., id = "") {
     xml_add_child(pm, p)
 
     if (is.element("extended_data", nx)) {
-        xd <- lapply(names(x$extended_data), function(x){
-            list(name = x)})
-        names(x$extended_data) <- NULL
+        ## xd <- lapply(names(x$extended_data), function(x){
+        ##     list(name = x)})
+        ## names(x$extended_data) <- NULL
         ## x$extended_data es una lista de lista
         ## display_name es lista con tantos elementos
         ## como datos
@@ -606,7 +605,7 @@ node_placemark <- function(..., id = "") {
     ##               "description", "style_url",
     ##               "extended_data", "coordinates") %in% names(x))
     if (is.element("name", nx)) {
-        xml_add_child(pm, node_name(x$name))
+        xml_add_child(pm, node_element("name", x$name))
     }
 
     if (is.element("open", nx)) {
@@ -619,7 +618,7 @@ node_placemark <- function(..., id = "") {
     }
 
     if (is.element("snippet", nx)) {
-        xml_add_child(pm, node_element("snippet",
+        xml_add_child(pm, node_element("Snippet",
                                        x$snippet))
     }
 
@@ -664,18 +663,24 @@ node_placemark <- function(..., id = "") {
 
 node_folder <- function(id = "", name = "", open = 0L,
                         visibility = 0L, snippet = "",
-                        dpm = NULL) {
+                        dpm = NULL,
+                        display_name) {
                         ## coordinates = c("x", "y"),
                         ## extended_data = "",
                         ## names_data = "") {
 
-    x <- list(Folder = structure(list(node_name(name),
-                                      node_open(open),
-                                      node_visibility(visibility),
-                                      node_snippet(snippet)),
-                                 id = id)) %>%
-        as_xml_document()
+    ## x <- list(Folder = structure(list(node_name(name),
+    ##                                   node_open(open),
+    ##                                   node_visibility(visibility),
+    ##                                   node_snippet(snippet)),
+    ##                              id = id)) %>%
+    ##     as_xml_document()
 
+    x <- node_element("Folder", atr = list(id = id))
+    xml_add_child(x, node_element("name", name))
+    xml_add_child(x, node_element("open", open))
+    xml_add_child(x, node_element("visibility", visibility))
+    xml_add_child(x, node_element("Snippet", snippet))
     ## si dpm no null
     ## - coordinates existen
     ## si nzchar(extended_data) -> dpm no es null,
@@ -691,7 +696,7 @@ node_folder <- function(id = "", name = "", open = 0L,
         ## dpm["coordinates"] <- pmap(dpm[, coordinates], list)
         ## dpm["extended_data"] <- pmap(dpm[, names_data], list)
         
-        pm <- pmap(dpm, node_placemark)
+        pm <- pmap(dpm, node_placemark, display_name = display_name)
         for(z in pm) xml_add_child(x, z)
     }
     invisible(x)
@@ -723,3 +728,73 @@ kml_root <- function(..., as_xml = TRUE) {
     if (as_xml) w <- as_xml_document(w)
     invisible(w)
 }
+
+
+
+
+
+## - KML delegaciones
+WD <- "c:/encuestas/ciclo2021"
+
+list_off(file.path(WD, "deleg.rda"))
+read_off(y, file = file.path(WD, "deleg.rda"))
+
+## names(y)
+## [1] "dpt"          "departamento" "ciudad"   "xutm"  "yutm"        
+## [6] "geometry"     "puntos"       "asignado"
+
+xy <- sf::st_coordinates(y) %>% as.data.frame %>%
+    set_names(tolower(names(.)))
+
+x <- sf::st_drop_geometry(y) %>%
+    select(departamento, ciudad, puntos, asignado) %>%
+    bind_cols(xy)
+
+z <- rename(x, name = departamento,
+            snippet = ciudad)
+
+z[["coordinates"]] <- pmap(z[,c("x", "y")], list)
+z[["extended_data"]] <- pmap(z[,c("puntos", "asignado")], list)
+##z[["display_name"]] <- rep(list(puntos = "pun", asignado = "asi"),
+                           each = 17)
+##z[["display_name"]] <- NULL
+z[["style_url"]] <- "#stym"
+
+ig <- "http://maps.google.com/mapfiles/kml/pal3"
+s1 <- sty_ico(url = file.path(ig, "icon31.png"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 0.8, as_xml = TRUE)
+
+s2 <- sty_ico(url = file.path(ig, "icon23.png"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 1.0, as_xml = TRUE)
+
+sb <- sty_lab(as_xml = TRUE)
+
+sn <- sty_sty(id = "norm", icon = s1, label = sb)
+sh <- sty_sty(id = "dest", icon = s2, label = sb)
+sm <- sty_map(id = "stym", "norm", "dest", as_xml = TRUE)
+
+## kd <- node_element("Document", atr = list(id = "root"))
+kd <- kml_root()
+xml_add_child(kd, sn)
+xml_add_child(kd, sh)
+xml_add_child(kd, sm)
+
+
+nf <- node_folder(name = "Delegaciones", visibility = 1L,
+                  dpm = z,
+                  display_name = list(puntos = xml_cdata("<i>pun</i>"),
+                                      asignado = xml_cdata("<b>asi</>")))
+
+xml_add_child(kd, nf)
+
+
+km <- xml_new_root("kml",
+                   xmlns = "http://www.opengis.net/kml/2.2")
+xml_add_child(km, kd)
+write_xml(km, "c:/eddy/code/web/sisea/dele.kml")
