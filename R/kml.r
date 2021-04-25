@@ -526,6 +526,26 @@ node_point <- function(x, y) {
 ## tener que pasarlo en columnas del data.frame con el que
 ## se construyen los Placemark. Puede ser xml_cdata o character
 
+#' Data-node
+#' @description Construye elemento Data
+#' @details Ver capítulo "Datos personalizados" en la documentación
+#'     oficial. Un elemento Data necesariamente tiene un nodo hijo
+#'     (<value></value>) con el valor del dato, y de manera opcional
+#'     un nodo displayName. El parámetro disp_names es una lista con
+#'     nombres igual a los atributos names de los diferentes elementos
+#'     Data que pueden estar contenidos en un nodo ExtendedData. El
+#'     valor del elemento displayName es tomado de esa lista según el
+#'     parámetro data_name. Si el valor de displayName es "", no se
+#'     agrega el elemento displayName al elemento Data.
+#' @param value numeric o character: valor del elemento value
+#' @param data_name character: atributo name del elemento Data
+#' @param disp_names lista de character o de elementos CDATA
+#' @export
+#' @return xml_node
+#' @examples
+#' node_data(3, "area", list(area = "", ciudad = ""))
+#' cd <- xml_cdata("<i>Manzanas finca</i>:")
+#' node_data(3, "area", list(area = cd, ciudad = ""))
 node_data <- function(value, data_name, disp_names) {
     disp_name <- disp_names[[data_name]]
     stopifnot("sin valor" = filled_char(value) || filled_num(value),
@@ -558,7 +578,28 @@ node_data <- function(value, data_name, disp_names) {
 ## list(value = list(), display_name = list())
 ## data es lista con nombre que contiene los datos
 ## dname es lista con el formato displayName
-node_extended_data <- function(data, dname) {
+
+#' Extended-data node
+#' @description Construye un elemento ExtendedData
+#' @details ExtendedData es el elemento que anida a uno o más
+#'     elementos Data. Los valores de los Data son pasados como
+#'     argumento del parámetro data, en una estructura de lista cuyos
+#'     nombres se utilizan de valor del atributo name de los elementos
+#'     Data. El argumento al parámetro dname contiene los valores de
+#'     los elementos displayName de los elementos Data. Esta debe ser
+#'     una lista con el mismo número de elementos que la lista pasada
+#'     al parámetro data.
+#' @seealso node_data
+#' @param data lista con nombres
+#' @param dname lista
+#' @return xml_node
+#' @export
+#' @examples
+#' dd <- list(area = 3, ciudad = "Managua")
+#' dn <- list(area = "Manzanas",
+#'            ciudad = xml_cdata("<b>Ciudad</b>"))
+#' node_extended_data(dd, dn)
+node_extended_data <- function(data = list(), dname = list()) {
 
     x <- node_element("ExtendedData")
 
@@ -576,6 +617,29 @@ node_extended_data <- function(data, dname) {
 ##   de los valores y del atributo name del nodo Data
 ## - no pueden faltar las coordenadas
 ## - algunos como visibility se dan por default
+
+#' Placemark node
+#' @description Construye un elemento Placemark
+#' @details Vea la documentación oficial de KML. Los parámetros tienen
+#'     nombre igual o similar a los correspondientes elementos hijos
+#'     de Placemark: name, open, visibility, snippet, description,
+#'     style_url, extended_data, display_name, coordinates. Todos son
+#'     opcionales excepto coordinates que es una lista con los
+#'     elementos x (longitud) e y (latitud). El parámetro
+#'     extended_data es una lista con los valores de los elementos
+#'     Data, con nombres igual al atributo name del elemento Data;
+#'     asociado a este, el parámetro display_name es una lista con los
+#'     valores del elemento displayName.
+#' @seealso node_data, node_extended_data
+#' @param ...
+#' @param id character o numeric: valor del atributo id de Placemark
+#' @return xml_node
+#' @export
+#' @examples
+#' node_placemark(coordinates = list(x = -84.4, y = 10.12))
+#' node_placemark(coordinates = list(x = -84.4, y = 10.12),
+#'                extended_data = list(area = 3, ciudad = "Ocotal"),
+#'                display_name = list(area = "", ciudad = "Ciudad"))
 node_placemark <- function(..., id = "") {
     x <- list(...)
     nx <- intersect(c("name", "open", "visibility", "snippet",
@@ -622,7 +686,6 @@ node_placemark <- function(..., id = "") {
                                        x$snippet))
     }
 
-    ## cuando description es CDATA?
     w <- NULL
     if (is.element("description", nx)) {
         w <- NULL
@@ -661,10 +724,32 @@ node_placemark <- function(..., id = "") {
 ## names_data: los atr. name de elem. Data ??
 ## styleUrl en Folder no afecta los Placemark
 
+#' Folder node
+#' @description Construye elemento Folder
+#' @details Ver documentación oficial de KML
+#' @seealso node_placemark, node_data
+#' @param id character o numeric: valor del atributo id de Folder
+#' @param name character: nombre del folder
+#' @param open numeric: 1 ó 0 según se quiera que el folder se vea
+#'     "abierto" o "cerrado" (0 por omisión) al inicio.
+#' @param visibility numeric: 1 ó 0 según se quiera que los Placemark
+#'     en el folder al inicio se muestren visibles o no (0 por
+#'     omisión)
+#' @param snippet character: leyenda del folder; "" por omisión
+#' @param data_pm data.frame cuyas columnas llevan las listas con los
+#'     valores de los elementos coordinates y ExtendedData (es
+#'     opcional; si se incluye, la columna del data.frame se llama
+#'     extended_data) de los elementos Placemark que conforman el
+#'     folder.
+#' @param display_name lista con los elementos del elemento
+#'     displayName del elemento Data (opcional)
+#' @return xml_node
+#' @export
+#' @examples
 node_folder <- function(id = "", name = "", open = 0L,
                         visibility = 0L, snippet = "",
-                        dpm = NULL,
-                        display_name) {
+                        data_pm = NULL,
+                        display_name = list()) {
                         ## coordinates = c("x", "y"),
                         ## extended_data = "",
                         ## names_data = "") {
@@ -677,16 +762,20 @@ node_folder <- function(id = "", name = "", open = 0L,
     ##     as_xml_document()
 
     x <- node_element("Folder", atr = list(id = id))
-    xml_add_child(x, node_element("name", name))
+    if (nzchar(name)) {
+        xml_add_child(x, node_element("name", name))
+    }
     xml_add_child(x, node_element("open", open))
     xml_add_child(x, node_element("visibility", visibility))
-    xml_add_child(x, node_element("Snippet", snippet))
+    if (nzchar(snippet)) {
+        xml_add_child(x, node_element("Snippet", snippet))
+    }
     ## si dpm no null
     ## - coordinates existen
     ## si nzchar(extended_data) -> dpm no es null,
     ##   y mismos elementos en names_data
     ## construye los place_mark
-    if (!is.null(dpm)) {
+    if (!is.null(data_pm)) {
         ## prepara df para placemark
         ## ii <- names(dpm) %in% coordinates
         ## names(dpm)[which(ii)] <- c("x", "y")
@@ -696,7 +785,7 @@ node_folder <- function(id = "", name = "", open = 0L,
         ## dpm["coordinates"] <- pmap(dpm[, coordinates], list)
         ## dpm["extended_data"] <- pmap(dpm[, names_data], list)
         
-        pm <- pmap(dpm, node_placemark, display_name = display_name)
+        pm <- pmap(data_pm, node_placemark, display_name = display_name)
         for(z in pm) xml_add_child(x, z)
     }
     invisible(x)
@@ -704,7 +793,14 @@ node_folder <- function(id = "", name = "", open = 0L,
 
 
 ## ...: name, Snippet, visibility, open
-kml_root <- function(..., as_xml = TRUE) {
+
+#' KML root
+#' @description
+#' @param ...
+#' @return xml_node
+#' @export
+#' @examples
+kml_root <- function(...) {
 
     ##nodes <- c("name", "Snippet", "visibility", "open")
     z <- list(list(name = list("root")),
@@ -725,12 +821,42 @@ kml_root <- function(..., as_xml = TRUE) {
     }
 
     w <- list(Document = structure(z, id = "id_root"))
-    if (as_xml) w <- as_xml_document(w)
+    ##if (as_xml)
+    w <- as_xml_document(w)
     invisible(w)
 }
 
+#' KML document
+#' @description Construye el documento KML
+#' @param estilos lista con elementos de estilos de uso común en el
+#'     documento
+#' @param ... parámetros adicionales con los valores de los elementos
+#'     hijos del elemento Document
+#' @return xml_node
+#' @export
+kml_doc <- function(estilos = list(), ...) {
+    x <- list(...)
 
-
+    w <- node_element("Document", list(id = "root"))
+    if (filled_list(x) || filled_list(estilos)) {
+        
+        if (filled_list(x)) {
+        }
+        
+        if (filled_list(estilos)) {
+            ## deben ser xml_node
+            for (n in estilos) {
+                xml_add_child(w, n)
+            }
+        }
+    }
+    
+    k <- xml_new_root("kml",
+                       xmlns = "http://www.opengis.net/kml/2.2")
+    xml_add_child(k, w)
+    
+    invisible(k)
+}
 
 
 ## - KML delegaciones
