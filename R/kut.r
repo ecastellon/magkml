@@ -113,6 +113,67 @@ is_scalar_name <- function(x) {
 
 ## --- helper func.
 
+#' Lon-Lat
+#' @description Proyección es lon-lat?
+#' @param x Objeto clase sf
+#' @return logical
+#' @export
+es_lonlat <- function(x) {
+    stopifnot("arg. x inválido" = inherits(x, "sf"))
+
+    ## st_is_longlat
+    sf::st_crs(x)$epsg == 3857
+}
+
+#' Proyectar lon-lat
+#' @description Reproyecta a lon-lat
+#' @param x Objeto de clase sf
+#' @return objeto de clase sf
+#' @export
+proyectar_lonlat <- function(x) {
+    stopifnot("arg. x inválido" = inherits(x, "sf"))
+    ## posible error si x no tiene asignada proyección
+    if (!es_lonlat) {
+        x <- sf::st_transform(x, crs = 3857)
+    }
+    invisible(x)
+}
+
+#' Coordenadas
+#' @description Construye lista con la listas de coordenadas
+#' @details Extrae las coordenadas de un objeto sf y las convierte en
+#'     una lista cuyos elementos son listas tipo list(x = , y =)
+#' @param x Objeto de clase sf
+#' @return lista con listas de coordenadas x, y
+#' @export
+coord_lista <- function(x) {
+    stopifnot("arg. x inválido" = inherits(x, "sf"),
+              "arg. x no son puntos" = all(st_is(x, "POINT")))
+
+    ## comprobar es multipoint
+    xy <- sf::st_coordinates(x) %>% as.data.frame %>%
+        set_names(tolower(names(.))) %>%
+        purrr::pmap(list)
+
+    invisible(xy)
+}
+
+#' Lista datos
+#' @description Construye lista cuyos elementos son listas de datos
+#' @details con los datos de algunas variables
+#' @param df data.frame
+#' @param vb character o integer que identifican las columnas del
+#'     data.frame
+#' @return lista
+#' @export
+datos_lista <- function(df, vb = character()) {
+    stopifnot("arg. df inválido" = is.data.frame(df) && nrow(df) > 0,
+              "arg. vb inválido" = filled_char(vb) || filled_num(vb))
+
+    x <- purrr::pmap(df[,vb], list)
+    invisible(x)
+}
+
 #' %in%
 #' @description Cuáles elementos de un vector hacen pareja con los
 #'     elementos de otro vector

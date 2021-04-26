@@ -2,9 +2,6 @@
 
 ## -- crear archivos kml --
 
-## comprobar el crs del archivo con las coordenadas
-## transformar de UTM a lon-lat
-
 #' Elemento
 #' @description Construye un elemento XML
 #' @details No valida la gramática del nombre del elemento
@@ -33,155 +30,6 @@ node_element <- function(tag = character(), val = "", atr = list(),
     if (as_xml) x <- as_xml_document(x)
     invisible(x)
 }
-
-#' Elementos
-#' @description Lista de elementos con mismo nombre
-#' @details Utiliza purrr::map2 para generar un grupo de elementos
-#' @param tag character: nombre del elemento
-#' @param val lista de character o numeric: valores de los elementos
-#' @param atr lista: lista de listas con atributos
-#' @param as_xml logical: devuelve lista u objeto xml_node (TRUE
-#'     por omisión)
-#' @return lista de listas u objetos xml_node
-#' @examples
-#' aa <- node_set_element("name", 1:3,
-#'                         list(list(id = "a"), list(id = "b"),
-#'                              list(id = "c")))
-#' @export
-node_set_element <- function(tag = character(), val = "", atr = list(),
-                                as_xml = TRUE) {
-
-    stopifnot("tag no-vale" = filled_char(tag) && is_scalar(tag),
-              "val no-vale" = filled_char(val) || filled_num(val),
-              "atr no-vale" = is.list(atr) && length(val) == length(atr))
-
-    invisible(purrr::map2(val, atr, node_element, tag = tag,
-                          as_xml = as_xml))
-}
-
-#' Elementos
-#' @description Lista de elementos con mismo nombre
-#' @details Alternativa a \code{node_set_element} si se utiliza
-#'     \code{purrr::partial} para inicializar el parámetro \code{tag}
-#'     o \code{as_xml}
-#' @param fun_element function: función que determina al elemento
-#' @param val lista de character o numeric: valores de los elementos
-#' @param atr lista: lista de listas con atributos
-#' @param as_xml logical: devuelve lista u objeto xml_node (TRUE por
-#'     omisión)
-#' @return lista u objeto xml_node
-#' @examples
-#' fufu <- purrr::partial(node_element, tag = "name")
-#' aa <- node_set_element_p(fufu, 1:3,
-#'                          list(list(id = "a"), list(id = "b"),
-#'                               list(id = "c")))
-#' @export
-node_set_element_p <- function(fun_element, val, atr) {
-    
-    stopifnot("fun no-vale" = is.function(fun_element),
-              "val no-vale" = filled_char(val) || filled_num(val),
-              "atr no-vale" = is.list(atr) && length(val) == length(atr))
-
-    invisible(purrr::map2(val, atr, fun_element))
-}
-
-## -- construir nodos con hijos
-##    elaborando listas y luego as_xml_document
-
-## sólo argumentos val y atr, pasados en lista
-
-#' Elementos anidados
-#' @description Nodos anidados en otros
-#' @details 
-#' @param fun_node lista de funciones
-#' @param arg lista del par \code{val} (valor nodo) y \code{atr} (lista
-#'     de atributos del nodo)
-#' @return lista de listas o de objetos xml_node
-#' @examples
-#' @keywords internal
-nest_node <- function(fun_node, arg) {
-    map2(fun_node, arg, function(f, x) {
-        if (is.function(f)) {
-            f(x$val, x$atr)
-        } else {
-            nest_node(f, x)
-        }})
-}
-
-
-## abstracción
-## lista de funciones de los nodos hijos pasada como argumento
-node_padre_hijo <- function(fun_hijo, padre, hijo) {
-    ## validar argumentos
-    nf <- node_nodes(fun_hijo, list(hijo))
-    if (filled_list(padre["atr"])) {
-        atr <- c(padre$atr, list(names = names(nf[[1]])))
-        attributes(nf[[1]]) <- atr
-    }
-    
-    invisible(nf)
-}
-
-## node_name <- purrr::partial(node_element, tag = "name",
-##                             as_xml = FALSE)
-## node_open <- purrr::partial(node_element, tag = "open",
-##                             as_xml = FALSE)
-## node_visibility <- purrr::partial(node_element, tag = "visibility",
-##                                   as_xml = FALSE)
-## node_snippet <- purrr::partial(node_element, tag = "Snippet",
-##                                as_xml = FALSE)
-## node_style_url <- purrr::partial(node_element, tag = "styleUrl",
-##                             as_xml = FALSE)
-## node_value <- purrr::partial(node_element, tag = "value",
-##                              as_xml = FALSE)
-## node_display_name <- purrr::partial(node_element,
-##                                     tag = "displayName",
-##                                     as_xml = FALSE)
-
-## displayName?
-node_data2 <- function(value, data_name = list(), disp_name = "") {
-    ## atr_data debe ser lista nombrada
-    if (nzchar(disp_name)) {
-        node_padre_hijo(list(Data = list(node_value,
-                                         node_display_name)),
-                        list(val = "", atr = data_name),
-                        list(list(val = value, atr = list()),
-                             list(val = disp_name, atr = list())))
-
-    } else {
-        node_padre_hijo(list(Data = node_value),
-                        list(val = "", atr = data_name),
-                        list(val = value, atr = list()))
-    }
-}
-
-
-## aa <- node_data(10, list(name = "si"))
-## fuu(aa)
-
-## aa <- node_data(10, list(name = "si"), "$dato")
-
-node_data_set <- function(values, data_names) {
-    ## atrs_data: lista de listas
-    ## values: lista
-    node_set_element(node_data, values, data_names)
-}
-
-
-## aa <- node_data_set(list(1, 2, 3), list(list(name = "a"),
-##                                         list(name = "b"),
-##                                         list(name = "c")))
-
-
-## displayNames?
-node_extended_data2 <- function(values, data_names) {
-    list(ExtendedData = map2(values, data_names, node_data))
-}
-
-## aa <- node_extended_data(list(1, 2, 3),
-##                          list(list(name = "a"),
-##                               list(name = "b"),
-##                               list(name = "c")))
 
 #' Ícono GE
 #' @description url de los íconos más comunes de google-earth
@@ -259,7 +107,7 @@ icon_def <- function(ico = "tachuela", col = "blanco") {
 }
 
 #' IconStyle
-#' @description Produce un nodo IconStyle de documento KML
+#' @description Elemento IconStyle
 #' @details (\code{https://developers.google.com/kml/documentation/})
 #' @param as_xml logical: devuelve documento xml o lista; FALSE por
 #'     omisión
@@ -323,7 +171,7 @@ sty_ico <- function(..., as_xml = FALSE) {
 }
 
 #' LabelStyle
-#' @description Nodo LabelStyle documento KML
+#' @description Elemento LabelStyle
 #' @details Estilo para el nombre del punto en el mapa
 #' @param as_xml logical: devuelve documento xml o lista; FALSE por
 #'     omisión
@@ -367,7 +215,7 @@ sty_lab <- function(..., as_xml = FALSE) {
 ## background:#FBF0D9;color:#5F4B32;
 
 #' BalloonStyle
-#' @description Nodo BalloonStyle documento KML
+#' @description Elemento BalloonStyle
 #' @details Estilo del cuadro que emerge cuando "click" el ícono del
 #'     punto
 #' @param as_xml logical: devuelve documento xml o lista; FALSE por
@@ -413,8 +261,8 @@ sty_bal <- function(..., as_xml = FALSE) {
 ## normal, destacado: id del estilo para cada caso
 
 #' StyleMap
-#' @description Nodo StyleMap documento KML
-#' @details ver especificaciones GE
+#' @description Elemento StyleMap
+#' @details Vea documentación oficial
 #' @param as_xml logical: devuelve documento xml o lista; FALSE por
 #'     omisión
 #' @param id character: atributo id del estilo
@@ -451,8 +299,8 @@ sty_map <- function(id = character(),
 }
 
 #' Style
-#' @description Nodo Style documento KML
-#' @details ver especificaciones
+#' @description Elemento Style
+#' @details Vea documentación oficial
 #' @param id character: atributo id del nodo Style
 #' @param icon nodo IconStyle
 #' @param label nodo LabelStyle
@@ -496,7 +344,7 @@ sty_sty <- function(id = character(), icon = NULL,
 }
 
 #' Coordenadas
-#' @description Produce el elemento \code{coordinates}
+#' @description Elemento \code{coordinates}
 #' @param x numeric: longitud
 #' @param y numeric: latitud
 #' @return xml_node
@@ -508,7 +356,7 @@ node_coordinates <- function(x, y) {
 }
 
 #' Point
-#' @description Produce el elemento \code{Point}
+#' @description Elemento \code{Point}
 #' @param x numeric: longitud
 #' @param y numeric: latitud
 #' @return xml_node
@@ -580,7 +428,7 @@ node_data <- function(value, data_name, disp_names) {
 ## dname es lista con el formato displayName
 
 #' Extended-data node
-#' @description Construye un elemento ExtendedData
+#' @description Construye elemento ExtendedData
 #' @details ExtendedData es el elemento que anida a uno o más
 #'     elementos Data. Los valores de los Data son pasados como
 #'     argumento del parámetro data, en una estructura de lista cuyos
@@ -619,7 +467,7 @@ node_extended_data <- function(data = list(), dname = list()) {
 ## - algunos como visibility se dan por default
 
 #' Placemark node
-#' @description Construye un elemento Placemark
+#' @description Construye elemento Placemark
 #' @details Vea la documentación oficial de KML. Los parámetros tienen
 #'     nombre igual o similar a los correspondientes elementos hijos
 #'     de Placemark: name, open, visibility, snippet, description,
@@ -638,63 +486,59 @@ node_extended_data <- function(data = list(), dname = list()) {
 #' @examples
 #' node_placemark(coordinates = list(x = -84.4, y = 10.12))
 #' node_placemark(coordinates = list(x = -84.4, y = 10.12),
-#'                extended_data = list(area = 3, ciudad = "Ocotal"),
-#'                display_name = list(area = "", ciudad = "Ciudad"))
+#'                ExtendedData = list(area = 3, ciudad = "Ocotal"),
+#'                displayName = list(area = "", ciudad = "Ciudad"))
 node_placemark <- function(..., id = "") {
     x <- list(...)
-    nx <- intersect(c("name", "open", "visibility", "snippet",
-                      "description", "style_url", "extended_data",
-                      "display_name", "coordinates"), names(x))
+    nm <- names(x)
+    nx <- c("name", "open", "visibility", "Snippet", "styleUrl")
 
-    stopifnot("falta nodo" = filled_char(nx),
-              "sin coordenadas" = en("coordinates", nx))
-        
+    stopifnot("falta nodo" = filled_char(nm),
+              "sin coordenadas" = en("coordinates", nm))
+
     pm <- node_element("Placemark", atr = list(id = id))
 
-    p <- node_point(x$coordinates$x, x$coordinates$y)
-    xml_add_child(pm, p)
-
-    if (is.element("extended_data", nx)) {
-        ## xd <- lapply(names(x$extended_data), function(x){
-        ##     list(name = x)})
-        ## names(x$extended_data) <- NULL
-        ## x$extended_data es una lista de lista
-        ## display_name es lista con tantos elementos
-        ## como datos
-        xm <- node_extended_data(x$extended_data, x$display_name)
-        xml_add_child(pm, xm)
+    if (filled_char(nm)) {
+        z <- walk2(x, names(x),
+                   function(x, y) {
+                       if (y %in% nx) {
+                           xml_add_child(pm, node_element(y, x))
+                       }
+                   })
     }
     
-    ## id <- which(c("name", "open", "visibility", "snippet",
-    ##               "description", "style_url",
-    ##               "extended_data", "coordinates") %in% names(x))
-    if (is.element("name", nx)) {
-        xml_add_child(pm, node_element("name", x$name))
-    }
+    ## if (is.element("name", nx)) {
+    ##     xml_add_child(pm, node_element("name", x$name))
+    ## }
 
-    if (is.element("open", nx)) {
-        xml_add_child(pm, node_element("open", x$open))
-    }
+    ## if (is.element("open", nx)) {
+    ##     xml_add_child(pm, node_element("open", x$open))
+    ## }
 
-    if (is.element("visibility", nx)) {
-        xml_add_child(pm, node_element("visibility",
-                                       x$visibility))
-    }
+    ## if (is.element("visibility", nx)) {
+    ##     xml_add_child(pm, node_element("visibility",
+    ##                                    x$visibility))
+    ## }
 
-    if (is.element("snippet", nx)) {
-        xml_add_child(pm, node_element("Snippet",
-                                       x$snippet))
-    }
+    ## if (is.element("snippet", nx)) {
+    ##     xml_add_child(pm, node_element("Snippet",
+    ##                                    x$snippet))
+    ## }
 
-    w <- NULL
-    if (is.element("description", nx)) {
-        w <- NULL
+    ## if (is.element("style_url", nx)) {
+    ##     xml_add_child(pm, node_element("styleUrl",
+    ##                                    x$style_url))
+    ## }
+
+    if (is.element("description", nm)) {
         if (inherits(x$description, "xml_cdata")) {
             w <- node_element("description")
             xml_add_child(w, x$description)
         } else {
             if (filled_char(x$description) && nzchar(x$description)) {
                 w <- node_element("description", x$description)
+            } else {
+                w <- character()
             }
         }
 
@@ -703,10 +547,20 @@ node_placemark <- function(..., id = "") {
         }
     }
 
-    if (is.element("style_url", nx)) {
-        xml_add_child(pm, node_element("styleUrl",
-                                       x$style_url))
+    if (is.element("ExtendedData", nm)) {
+        ## tiene que estar displayName; si no, list() e igual num. elem.
+        ## xd <- lapply(names(x$extended_data), function(x){
+        ##     list(name = x)})
+        ## names(x$extended_data) <- NULL
+        ## x$extended_data es una lista de lista
+        ## display_name es lista con tantos elementos
+        ## como datos
+        xm <- node_extended_data(x$ExtendedData, x$displayName)
+        xml_add_child(pm, xm)
     }
+
+    p <- node_point(x$coordinates$x, x$coordinates$y)
+    xml_add_child(pm, p)
 
     invisible(pm)
 }
@@ -746,30 +600,21 @@ node_placemark <- function(..., id = "") {
 #' @return xml_node
 #' @export
 #' @examples
-node_folder <- function(id = "", name = "", open = 0L,
-                        visibility = 0L, snippet = "",
-                        data_pm = NULL,
-                        display_name = list()) {
-                        ## coordinates = c("x", "y"),
-                        ## extended_data = "",
-                        ## names_data = "") {
-
-    ## x <- list(Folder = structure(list(node_name(name),
-    ##                                   node_open(open),
-    ##                                   node_visibility(visibility),
-    ##                                   node_snippet(snippet)),
-    ##                              id = id)) %>%
-    ##     as_xml_document()
+node_folder <- function(id = "", data_pm = NULL, displayName = list(),
+                        name = "", open = 0L,
+                        visibility = 0L, Snippet = "") {
 
     x <- node_element("Folder", atr = list(id = id))
+
+    xml_add_child(x, node_element("open", open))
+    xml_add_child(x, node_element("visibility", visibility))
     if (nzchar(name)) {
         xml_add_child(x, node_element("name", name))
     }
-    xml_add_child(x, node_element("open", open))
-    xml_add_child(x, node_element("visibility", visibility))
-    if (nzchar(snippet)) {
-        xml_add_child(x, node_element("Snippet", snippet))
+    if (nzchar(Snippet)) {
+        xml_add_child(x, node_element("Snippet", Snippet))
     }
+
     ## si dpm no null
     ## - coordinates existen
     ## si nzchar(extended_data) -> dpm no es null,
@@ -785,70 +630,46 @@ node_folder <- function(id = "", name = "", open = 0L,
         ## dpm["coordinates"] <- pmap(dpm[, coordinates], list)
         ## dpm["extended_data"] <- pmap(dpm[, names_data], list)
         
-        pm <- pmap(data_pm, node_placemark, display_name = display_name)
-        for(z in pm) xml_add_child(x, z)
+        pm <- pmap(data_pm, node_placemark,
+                   displayName = displayName)
+        
+        if (filled_list(pm)) {
+            for(z in pm) xml_add_child(x, z)
+        }
     }
     invisible(x)
 }
 
-
-## ...: name, Snippet, visibility, open
-
-#' KML root
-#' @description
-#' @param ...
-#' @return xml_node
-#' @export
-#' @examples
-kml_root <- function(...) {
-
-    ##nodes <- c("name", "Snippet", "visibility", "open")
-    z <- list(list(name = list("root")),
-              list(Snippet = list("root")),
-              list(visibility = list(0)),
-              list(open = list(0)))
-    
-    y <- list(...)
-    if (filled_list(y)) {
-        z <- remplazar(z, names(z), names(y), y)
-        ## ny <- names(y)
-        ## iy <- which(ny %in% nodes)
-        ## if (filled(iy)) {
-        ##     y <- lapply(iy, function(x) y[x])
-        ##     iz <- which(nodes %in% ny)
-        ##     z[iz] <- y
-        ## }
-    }
-
-    w <- list(Document = structure(z, id = "id_root"))
-    ##if (as_xml)
-    w <- as_xml_document(w)
-    invisible(w)
-}
-
 #' KML document
-#' @description Construye el documento KML
+#' @description Construye elemento raíz de KML
 #' @param estilos lista con elementos de estilos de uso común en el
 #'     documento
 #' @param ... parámetros adicionales con los valores de los elementos
-#'     hijos del elemento Document
+#'     hijos del elemento Document (name, open, visibility, Snippet)
 #' @return xml_node
 #' @export
-kml_doc <- function(estilos = list(), ...) {
+kml_doc <- function(...) {
     x <- list(...)
 
-    w <- node_element("Document", list(id = "root"))
-    if (filled_list(x) || filled_list(estilos)) {
+    w <- node_element("Document", atr = list(id = "root"))
         
-        if (filled_list(x)) {
-        }
+    if (filled_list(x)) {
+        ## chk character c/u
+        nx <- c("name", "open", "visibility", "Snippet")
         
-        if (filled_list(estilos)) {
-            ## deben ser xml_node
-            for (n in estilos) {
-                xml_add_child(w, n)
-            }
-        }
+        z <- purrr::walk2(x, names(x),
+                   function(x, y) {
+                       if (inherits(x, "xml_node")) {
+                           xml_add_child(w, x)
+                       } else {
+                           if (y %in% nx) {
+                               if (filled_num(x) ||
+                                   (filled_char(x) && nzchar(x))) {
+                                   xml_add_child(w, node_element(y, x))
+                               }
+                           }
+                       }
+                   })
     }
     
     k <- xml_new_root("kml",
@@ -857,70 +678,3 @@ kml_doc <- function(estilos = list(), ...) {
     
     invisible(k)
 }
-
-
-## - KML delegaciones
-WD <- "c:/encuestas/ciclo2021"
-
-list_off(file.path(WD, "deleg.rda"))
-read_off(y, file = file.path(WD, "deleg.rda"))
-
-## names(y)
-## [1] "dpt"          "departamento" "ciudad"   "xutm"  "yutm"        
-## [6] "geometry"     "puntos"       "asignado"
-
-xy <- sf::st_coordinates(y) %>% as.data.frame %>%
-    set_names(tolower(names(.)))
-
-x <- sf::st_drop_geometry(y) %>%
-    select(departamento, ciudad, puntos, asignado) %>%
-    bind_cols(xy)
-
-z <- rename(x, name = departamento,
-            snippet = ciudad)
-
-z[["coordinates"]] <- pmap(z[,c("x", "y")], list)
-z[["extended_data"]] <- pmap(z[,c("puntos", "asignado")], list)
-##z[["display_name"]] <- rep(list(puntos = "pun", asignado = "asi"),
-                           each = 17)
-##z[["display_name"]] <- NULL
-z[["style_url"]] <- "#stym"
-
-ig <- "http://maps.google.com/mapfiles/kml/pal3"
-s1 <- sty_ico(url = file.path(ig, "icon31.png"),
-              pos = list(x = 0.5, y = 0.5,
-                         xunits = "fraction",
-                         yunits = "fraction"),
-              escala = 0.8, as_xml = TRUE)
-
-s2 <- sty_ico(url = file.path(ig, "icon23.png"),
-              pos = list(x = 0.5, y = 0.5,
-                         xunits = "fraction",
-                         yunits = "fraction"),
-              escala = 1.0, as_xml = TRUE)
-
-sb <- sty_lab(as_xml = TRUE)
-
-sn <- sty_sty(id = "norm", icon = s1, label = sb)
-sh <- sty_sty(id = "dest", icon = s2, label = sb)
-sm <- sty_map(id = "stym", "norm", "dest", as_xml = TRUE)
-
-## kd <- node_element("Document", atr = list(id = "root"))
-kd <- kml_root()
-xml_add_child(kd, sn)
-xml_add_child(kd, sh)
-xml_add_child(kd, sm)
-
-
-nf <- node_folder(name = "Delegaciones", visibility = 1L,
-                  dpm = z,
-                  display_name = list(puntos = xml_cdata("<i>pun</i>"),
-                                      asignado = xml_cdata("<b>asi</>")))
-
-xml_add_child(kd, nf)
-
-
-km <- xml_new_root("kml",
-                   xmlns = "http://www.opengis.net/kml/2.2")
-xml_add_child(km, kd)
-write_xml(km, "c:/eddy/code/web/sisea/dele.kml")
