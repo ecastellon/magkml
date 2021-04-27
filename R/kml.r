@@ -109,7 +109,7 @@ icon_def <- function(ico = "tachuela", col = "blanco") {
 #' IconStyle
 #' @description Elemento IconStyle
 #' @details (\code{https://developers.google.com/kml/documentation/})
-#' @param as_xml logical: devuelve documento xml o lista; FALSE por
+#' @param as_xml logical: devuelve documento xml o lista; TRUE por
 #'     omisión
 #' @param ... admisibles: id, ico, col, color, escala, rumbo, url, pos
 #' @return nodo IconStyle
@@ -119,7 +119,7 @@ icon_def <- function(ico = "tachuela", col = "blanco") {
 #' sty_ico()
 #' sty_ico(ico = "tach", col = "rojo")
 #' sty_ico(ico = "")
-sty_ico <- function(..., as_xml = FALSE) {
+sty_ico <- function(..., as_xml = TRUE) {
     ## TODO: chk. args
 
     ## -- especificaciones --
@@ -173,7 +173,7 @@ sty_ico <- function(..., as_xml = FALSE) {
 #' LabelStyle
 #' @description Elemento LabelStyle
 #' @details Estilo para el nombre del punto en el mapa
-#' @param as_xml logical: devuelve documento xml o lista; FALSE por
+#' @param as_xml logical: devuelve documento xml o lista; TRUE por
 #'     omisión
 #' @param ... admisibles: id, color, colorMode, escala
 #' @return nodo LabelStyle
@@ -181,7 +181,7 @@ sty_ico <- function(..., as_xml = FALSE) {
 #' @examples
 #' sty_lab()
 #' sty_lab(id = "labRojo", color = "ffffff00", escala = 1.2)
-sty_lab <- function(..., as_xml = FALSE) {
+sty_lab <- function(..., as_xml = TRUE) {
     ## default
     z <- list(color     = "ff000000", # negro
               colorMode = "normal",
@@ -218,14 +218,14 @@ sty_lab <- function(..., as_xml = FALSE) {
 #' @description Elemento BalloonStyle
 #' @details Estilo del cuadro que emerge cuando "click" el ícono del
 #'     punto
-#' @param as_xml logical: devuelve documento xml o lista; FALSE por
+#' @param as_xml logical: devuelve documento xml o lista; TRUE por
 #'     omisión
 #' @param ... admisibles: bgcol, txtcol, texto, modo
 #' @return nodo BalloonStyle
 #' @export
 #' @examples
 #' sty_bal()
-sty_bal <- function(..., as_xml = FALSE) {
+sty_bal <- function(..., as_xml = TRUE) {
     ## default
     z <- list(bgcol  = "ffffffff", # blanco
               txtcol = "ff000000", # negro
@@ -263,7 +263,7 @@ sty_bal <- function(..., as_xml = FALSE) {
 #' StyleMap
 #' @description Elemento StyleMap
 #' @details Vea documentación oficial
-#' @param as_xml logical: devuelve documento xml o lista; FALSE por
+#' @param as_xml logical: devuelve documento xml o lista; TRUE por
 #'     omisión
 #' @param id character: atributo id del estilo
 #' @param normal character: atributo id del estilo normal
@@ -274,7 +274,7 @@ sty_bal <- function(..., as_xml = FALSE) {
 #' sty_map(id = "estilo", "estilo1", "estilo2")
 sty_map <- function(id = character(),
                     normal = character(),
-                    destacado = character(), as_xml = FALSE) {
+                    destacado = character(), as_xml = TRUE) {
     stopifnot(exprs = {
         "arg. id" = filled_char(id) && is_scalar(id)
         "arg. norm." = filled_char(normal) && is_scalar(normal)
@@ -648,33 +648,44 @@ node_folder <- function(id = "", data_pm = NULL, displayName = list(),
 #'     hijos del elemento Document (name, open, visibility, Snippet)
 #' @return xml_node
 #' @export
-kml_doc <- function(...) {
+kml_doc <- function(..., estilos = list(), folders = list()) {
     x <- list(...)
 
     w <- node_element("Document", atr = list(id = "root"))
-        
+
     if (filled_list(x)) {
         ## chk character c/u
         nx <- c("name", "open", "visibility", "Snippet")
         
-        z <- purrr::walk2(x, names(x),
-                   function(x, y) {
-                       if (inherits(x, "xml_node")) {
-                           xml_add_child(w, x)
-                       } else {
-                           if (y %in% nx) {
-                               if (filled_num(x) ||
-                                   (filled_char(x) && nzchar(x))) {
-                                   xml_add_child(w, node_element(y, x))
-                               }
-                           }
-                       }
-                   })
+        z <- purrr::walk2(x, names(x), function(x, y) {
+            if (y %in% nx) {
+                if (filled_num(x) ||
+                    (filled_char(x) && nzchar(x))) {
+                    xml_add_child(w, node_element(y, x))
+                }
+            }
+        })
     }
-    
+
+    if (filled_list(estilos)) {
+        purrr::walk(estilos, function(x) {
+            if (inherits(x, "xml_node")) {
+                xml_add_child(w, x)
+            }
+        })
+    }
+
+    if (filled_list(folders)) {
+        purrr::walk(folders, function(x) {
+            if (inherits(x, "xml_node")) {
+                xml_add_child(w, x)
+            }
+        })
+    }
+
     k <- xml_new_root("kml",
-                       xmlns = "http://www.opengis.net/kml/2.2")
+                  xmlns = "http://www.opengis.net/kml/2.2")
     xml_add_child(k, w)
-    
+
     invisible(k)
 }

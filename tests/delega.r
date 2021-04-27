@@ -10,6 +10,44 @@ read_off(y, file = file.path(WD, "deleg.rda"))
 ## [1] "dpt"          "departamento" "ciudad"   "xutm"  "yutm"        
 ## [6] "geometry"     "puntos"       "asignado"
 
+s1 <- sty_ico(url = url_google_ico(ico = "icon31"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 0.8)
+
+s2 <- sty_ico(url = url_google_ico(ico = "icon23"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 1.0)
+
+sb <- sty_lab()
+
+sn <- sty_sty(id = "norm", icon = s1, label = sb)
+sh <- sty_sty(id = "dest", icon = s2, label = sb)
+sm <- sty_map(id = "stym", "norm", "dest")
+
+x <- coord_lista(y)
+## si no I() cada elemento de la lista x -> variable
+z <- data.frame(coordinates = I(x))
+z[["ExtendedData"]] <- datos_lista(y, c("puntos", "asignado"))
+z[["name"]] <- y$departamento
+z[["Snippet"]] <- y$ciudad
+z[["styleUrl"]] <- "#stym"
+
+nf <- node_folder(name = "Delegaciones", visibility = 1L,
+                  data_pm = z,
+                  displayName = list(puntos = xml_cdata("<i>pun</i>"),
+                                     asignado = xml_cdata("<b>asi</>")))
+
+km <- kml_doc(name = "aja", estilos = list(sn, sh, sm),
+              folders = list(nf))
+
+
+write_xml(km, "c:/eddy/code/web/sisea/dele.kml")
+
+## --- viejo ---
 xy <- sf::st_coordinates(y) %>% as.data.frame %>%
     set_names(tolower(names(.)))
 
@@ -23,7 +61,7 @@ z <- rename(x, name = departamento,
 z[["coordinates"]] <- pmap(z[,c("x", "y")], list)
 z[["extended_data"]] <- pmap(z[,c("puntos", "asignado")], list)
 ##z[["display_name"]] <- rep(list(puntos = "pun", asignado = "asi"),
-                           each = 17)
+##                           each = 17)
 ##z[["display_name"]] <- NULL
 z[["style_url"]] <- "#stym"
 

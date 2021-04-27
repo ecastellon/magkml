@@ -148,11 +148,10 @@ proyectar_lonlat <- function(x) {
 #' @export
 coord_lista <- function(x) {
     stopifnot("arg. x inválido" = inherits(x, "sf"),
-              "arg. x no son puntos" = all(st_is(x, "POINT")))
+              "arg. x no son puntos" = all(sf::st_is(x, "POINT")))
 
-    ## comprobar es multipoint
     xy <- sf::st_coordinates(x) %>% as.data.frame %>%
-        set_names(tolower(names(.))) %>%
+        set_names(c("x", "y")) %>%
         purrr::pmap(list)
 
     invisible(xy)
@@ -170,8 +169,30 @@ datos_lista <- function(df, vb = character()) {
     stopifnot("arg. df inválido" = is.data.frame(df) && nrow(df) > 0,
               "arg. vb inválido" = filled_char(vb) || filled_num(vb))
 
+    if (inherits(df, "sf")) {
+        df <- sf::st_drop_geometry(df)
+    }
+    
     x <- purrr::pmap(df[,vb], list)
     invisible(x)
+}
+
+#' Ícono-google
+#' @description Url de íconos google-earth
+#' @details Los íconos están agrupados en "paletas". El argumento al
+#'     parámetro pal puede ser uno de pal2, pal3, pal4, pal5 o
+#'     shapes. Vea \code{http://kml4earth.appspot.com/icons.html} para
+#'     escoger.
+#' @param pal character: paleta de íconos; "pal3" por defecto
+#' @param ico character: nombre del archivo (sin extensión) que
+#'     corresponde al ícono
+#' @return character
+#' @export
+#' @examples
+#' url_google_ico("pal3", "incon31")
+url_google_ico <- function(pal = "pal3", ico = character()) {
+    file.path("http://maps.google.com/mapfiles/kml", pal,
+              paste0(ico, ".png"))
 }
 
 #' %in%
