@@ -6,33 +6,15 @@
 ##   - ícono, raqueta simple color blanco
 ##   - estilo de etiquetas el mismo
 
-## estilos íconos
-col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
-    extract(c(9, 1, 8, 4, 3, 2)) %>%
-    vapply(BGR, "") %>%
-    c("FFFFFF") %>%
-    paste0("FF", .) %>%
-    set_names(c("comp", "noag", "inco", "noen", "rech",
-                "inac", "pend"))
-
-## estilo labels
-sb <- sty_lab(escala = 0.8,
-              color = "FF61AEFD")
-
-es <- map2(col, names(col),
-           function(x, y, z) {
-               sty_sty(id = y,
-                       icon = sty_ico(ico = "raq",
-                                      col = "blanco",
-                                      escala = 1.0,
-                                      color = x),
-                       label = z)
-           }, z = sb)
-
 ## folder
 WD <- "c:/encuestas/ciclo2021"
 nom_propio <- magest::a_propio
 muni <- magmun::municipios()
+
+u <- iconv(muni$municipio, "UTF-8", "")
+muni["municipio"] <- u
+u <- iconv(muni$departamento, "UTF-8", "")
+muni["departamento"] <- u
 
 ## avance abril
 ccq <- setNames(1:7, c("completo", "no-agrícola", "incompleto",
@@ -49,6 +31,11 @@ z <- get_dff(d04, fd) %>%
                                        dirfinca,
                                        sep = "; ")),
            mun = magmun::concatenar_int(c004, c005))
+
+y <- get_dff(tecnico, file.path(WD, "deleg.rda"))
+
+z["tecnico"] <- remplazar(NULL, z$nombretec, y$codtec, y$tecnico)
+z[is.na(z$tecnico), "tecnico"] <- "desconocido"
 
 z["giro"] <- c("agrícola","pecuario", "forestal",
                "inactiva")[z$c050]
@@ -79,7 +66,7 @@ u <- c(ns = 5, ji = 10, mz = 20, es = 25, ch = 30, le = 35,
        mt = 40, bo = 50, mg = 55, my = 60, ct = 65, gr = 70,
        cz = 75, ri = 80, sj = 85, rn = 91, rs = 93)
 w["dpt"] <- u[w$dpt]
-w["mun"] <- concatenar_int(w$dpt, 5)
+w["mun"] <- magmun::concatenar_int(w$dpt, 5)
 w["delega"] <- remplazar(NULL, w$mun, muni$mun, muni$departamento)
 
 x["delega"] <- remplazar(NULL, x$punto, w$punto, w$delega)
@@ -98,8 +85,8 @@ x["departamento"] <- remplazar(NULL, x$punto, z$quest,
 ii <- is.na(x$departamento)
 x[ii, "departamento"] <- (muni$departamento[mm])[ii]
 
-x["municipio"] <- replazar(NULL, x$mun, muni$mun, muni$municipio)
-x["departamento"] <- replazar(NULL, x$mun, muni$mun,
+x["municipio"] <- remplazar(NULL, x$mun, muni$mun, muni$municipio)
+x["departamento"] <- remplazar(NULL, x$mun, muni$mun,
                               muni$departamento)
 
 x["local"] <- remplazar(NULL, x$punto, z$quest, z$local)
@@ -119,21 +106,63 @@ x[is.na(x$control), "control"] <- "pendiente"
 x["giro"] <- remplazar(NULL, x$punto, z$quest, z$giro)
 x[is.na(x$giro), "giro"] <- "desconocido"
 
+## tecnico
+x["tecnico"] <- remplazar(NULL, x$punto, z$quest, z$tecnico)
+x[is.na(x$tecnico), "tecnico"] <- "desconocido"
+
 ## -- datos folder --
-hr <- paste0("#", names(col))
+## estilos íconos
+col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
+    extract(c(9, 1, 8, 4, 3, 2)) %>%
+    vapply(BGR, "") %>%
+    c("FFFFFF") %>%
+    paste0("FF", .) %>%
+    set_names(c("comp", "noag", "inco", "noen", "rech",
+                "inac", "pend"))
 
-ccq <- setNames(1:7, hr)
+## estilo labels
+sb <- sty_lab(escala = 0.8,
+              color = "FF61AEFD")
 
+es <- map2(col, names(col),
+           function(x, y, z) {
+               sty_sty(id = y,
+                       icon = sty_ico(ico = "raq",
+                                      col = "blanco",
+                                      escala = 1.0,
+                                      color = x),
+                       label = z)
+           }, z = sb)
+
+## folder puntos
+cc <- c("delega", "tecnico", "control", "departamento", "municipio",
+        "local", "finca", "dirfinca", "giro")
 w <- data.frame(name = x$punto,
                 coordinates = coord_lista(y) %>% I,
+                ExtendedData = datos_lista(x, cc) %>% I,
                 styleUrl = "#pend")
 
+hr <- paste0("#", names(col))
 w["styleUrl"] <- remplazar(w$styleUrl, w$name, z$quest, hr[z$c5000])
 
+dn <- list(delega       = "Delegación",
+           tecnico      = "Técnico",
+           control      = "Control",
+           departamento = "Departamento",
+           municipio    = "Municipio",
+           local        = "Localidad",
+           finca        = "Finca",
+           dirfinca     = "Dirección",
+           giro         = "Giro")
+
+
 nf <- node_folder(name = "Nueva Segovia", visibility = 1L,
-                  data_pm = filter(w, x$dpt == 5))
+                  data_pm = filter(w, x$dpt == 5),
+                  displayName = dn)
 
+## folder Delegaciones
 
+## documento
 km <- kml_doc(estilos = es,
               folders = list(nf))
 
