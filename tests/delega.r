@@ -6,9 +6,6 @@
 ##   - ícono, raqueta simple color blanco
 ##   - estilo de etiquetas el mismo
 
-sb <- sty_lab(escala = 0.85,
-              color = "FF61AEFD")
-
 ## estilos íconos
 col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
     extract(c(9, 1, 8, 4, 3, 2)) %>%
@@ -18,30 +15,111 @@ col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
     set_names(c("comp", "noag", "inco", "noen", "rech",
                 "inac", "pend"))
 
+## estilo labels
+sb <- sty_lab(escala = 0.8,
+              color = "FF61AEFD")
+
 es <- map2(col, names(col),
            function(x, y, z) {
                sty_sty(id = y,
                        icon = sty_ico(ico = "raq",
                                       col = "blanco",
-                                      escala = 0.9,
+                                      escala = 1.0,
                                       color = x),
                        label = z)
            }, z = sb)
 
 ## folder
 WD <- "c:/encuestas/ciclo2021"
+nom_propio <- magest::a_propio
+muni <- magmun::municipios()
 
 ## avance abril
-fd <- file.path(WD, "datos", "abr2021.rda")
-z <- get_dff(d04, fd)
+ccq <- setNames(1:7, c("completo", "no-agrícola", "incompleto",
+                       "no-informante", "rechazo", "no-acceso",
+                       "pendiente"))
 
-## coordenadas de los puntos
+fd <- file.path(WD, "datos", "abr2021.rda")
+z <- get_dff(d04, fd) %>%
+    rename(finca = "name_expagrp",
+           dirfinca = "dir_explagrop") %>%
+    mutate(finca = nom_propio(finca),
+           local = nom_propio(ciudadfinca),
+           dirfinca = nom_propio(paste(ptoreffinca,
+                                       dirfinca,
+                                       sep = "; ")),
+           mun = magmun::concatenar_int(c004, c005))
+
+z["giro"] <- c("agrícola","pecuario", "forestal",
+               "inactiva")[z$c050]
+z[is.na(z$giro), "giro"] <- "desconocido"
+
+z["municipio"] <- remplazar(NULL, z$mun, muni$mun, muni$municipio)
+z["departamento"] <- remplazar(NULL, z$mun, muni$mun,
+                               muni$departamento)
+## z[is.na(z$municipio), "municipio"] <- "desconocido"
+## z[is.na(z$departamento), "departamento"] <- "desconocido"
+
+ii <- is.na(z$local) || !nzchar(z$local)
+z[ii, "local"] <- "desconocido"
+
+z["ccontrol"] <- names(ccq)[z$c5000]
+
+## -- los puntos --
 fp <- file.path(WD, "datos", "puntos2021.rda")
 y <- get_off(pun, file = fp) %>%
     proyectar_lonlat()
 
+## -- prepara los datos --
 x <- sf::st_drop_geometry(y)
 
+## puntos asignados por delegación
+w <- get_dff(ptodpt, file.path(WD, "deleg.rda"))
+u <- c(ns = 5, ji = 10, mz = 20, es = 25, ch = 30, le = 35,
+       mt = 40, bo = 50, mg = 55, my = 60, ct = 65, gr = 70,
+       cz = 75, ri = 80, sj = 85, rn = 91, rs = 93)
+w["dpt"] <- u[w$dpt]
+w["mun"] <- concatenar_int(w$dpt, 5)
+w["delega"] <- remplazar(NULL, w$mun, muni$mun, muni$departamento)
+
+x["delega"] <- remplazar(NULL, x$punto, w$punto, w$delega)
+
+## ubicación, nombre y direcc. finca
+## esta secuencia por si en z hay NA
+mm <- match(x$mun, muni$mun)
+
+x["municipio"] <- remplazar(NULL, x$punto, z$quest,
+                            z$municipio)
+ii <- is.na(x$municipio)
+x[ii, "municipio"] <- (muni$municipio[mm])[ii]
+
+x["departamento"] <- remplazar(NULL, x$punto, z$quest,
+                            z$departamento)
+ii <- is.na(x$departamento)
+x[ii, "departamento"] <- (muni$departamento[mm])[ii]
+
+x["municipio"] <- replazar(NULL, x$mun, muni$mun, muni$municipio)
+x["departamento"] <- replazar(NULL, x$mun, muni$mun,
+                              muni$departamento)
+
+x["local"] <- remplazar(NULL, x$punto, z$quest, z$local)
+x[is.na(x$local), "local"] <- "desconocido"
+
+x["finca"] <- remplazar(NULL, x$punto, z$quest, z$finca)
+x[is.na(x$finca), "finca"] <- "desconocido"
+
+x["dirfinca"] <- remplazar(NULL, x$punto, z$quest, z$dirfinca)
+x[is.na(x$dirfinca), "dirfinca"] <- "desconocido"
+
+## control cuestionario
+x["control"] <- remplazar(NULL, x$punto, z$quest, z$ccontrol)
+x[is.na(x$control), "control"] <- "pendiente"
+
+## giro principal
+x["giro"] <- remplazar(NULL, x$punto, z$quest, z$giro)
+x[is.na(x$giro), "giro"] <- "desconocido"
+
+## -- datos folder --
 hr <- paste0("#", names(col))
 
 ccq <- setNames(1:7, hr)
