@@ -1,7 +1,68 @@
 # -*- coding: utf-8 -*-
 
-## - KML delegaciones
+## - KML avance puntos
+## estilos de los puntos
+##   - color del ícono según código de control
+##   - ícono, raqueta simple color blanco
+##   - estilo de etiquetas el mismo
+
+sb <- sty_lab(escala = 0.85,
+              color = "FF61AEFD")
+
+## estilos íconos
+col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
+    extract(c(9, 1, 8, 4, 3, 2)) %>%
+    vapply(BGR, "") %>%
+    c("FFFFFF") %>%
+    paste0("FF", .) %>%
+    set_names(c("comp", "noag", "inco", "noen", "rech",
+                "inac", "pend"))
+
+es <- map2(col, names(col),
+           function(x, y, z) {
+               sty_sty(id = y,
+                       icon = sty_ico(ico = "raq",
+                                      col = "blanco",
+                                      escala = 0.9,
+                                      color = x),
+                       label = z)
+           }, z = sb)
+
+## folder
 WD <- "c:/encuestas/ciclo2021"
+
+## avance abril
+fd <- file.path(WD, "datos", "abr2021.rda")
+z <- get_dff(d04, fd)
+
+## coordenadas de los puntos
+fp <- file.path(WD, "datos", "puntos2021.rda")
+y <- get_off(pun, file = fp) %>%
+    proyectar_lonlat()
+
+x <- sf::st_drop_geometry(y)
+
+hr <- paste0("#", names(col))
+
+ccq <- setNames(1:7, hr)
+
+w <- data.frame(name = x$punto,
+                coordinates = coord_lista(y) %>% I,
+                styleUrl = "#pend")
+
+w["styleUrl"] <- remplazar(w$styleUrl, w$name, z$quest, hr[z$c5000])
+
+nf <- node_folder(name = "Nueva Segovia", visibility = 1L,
+                  data_pm = filter(w, x$dpt == 5))
+
+
+km <- kml_doc(estilos = es,
+              folders = list(nf))
+
+write_xml(km, "c:/eddy/code/web/sisea/pun.kml")
+
+
+## - KML delegaciones
 
 list_off(file.path(WD, "deleg.rda"))
 read_off(y, file = file.path(WD, "deleg.rda"))

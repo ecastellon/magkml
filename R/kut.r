@@ -122,7 +122,7 @@ es_lonlat <- function(x) {
     stopifnot("arg. x inválido" = inherits(x, "sf"))
 
     ## st_is_longlat
-    sf::st_crs(x)$epsg == 3857
+    sf::st_crs(x)$epsg == 4326
 }
 
 #' Proyectar lon-lat
@@ -133,8 +133,8 @@ es_lonlat <- function(x) {
 proyectar_lonlat <- function(x) {
     stopifnot("arg. x inválido" = inherits(x, "sf"))
     ## posible error si x no tiene asignada proyección
-    if (!es_lonlat) {
-        x <- sf::st_transform(x, crs = 3857)
+    if (!es_lonlat(x)) {
+        x <- sf::st_transform(x, crs = 4326)
     }
     invisible(x)
 }
@@ -193,6 +193,21 @@ datos_lista <- function(df, vb = character()) {
 url_google_ico <- function(pal = "pal3", ico = character()) {
     file.path("http://maps.google.com/mapfiles/kml", pal,
               paste0(ico, ".png"))
+}
+
+#'BGR-color
+#' @description Convierte RGB a BGR
+#' @details En KML los canales de los colores se especifican en la
+#'     secuencia ABGR, donde A es el canal "alpha", B el azul, G el
+#'     verde y R el rojo
+#' @param x character: La secuencia RGB de caracteres que definen el
+#'     número hexadecimal del color
+#' @return character
+#' @export
+BGR <- function(x = character()) {
+    stopifnot("arg. x inválido" = filled_char(x) && is_scalar(x))
+    ## asegurar que al menos 6 caracteres
+    sub("(\\W?)(\\w{2})(\\w{2})(\\w{2})", "\\4\\3\\2", x)
 }
 
 #' %in%
