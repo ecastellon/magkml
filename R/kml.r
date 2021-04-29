@@ -684,7 +684,8 @@ kml_doc <- function(..., estilos = list(), folders = list()) {
     }
 
     k <- xml_new_root("kml",
-                  xmlns = "http://www.opengis.net/kml/2.2")
+                      xmlns = "http://www.opengis.net/kml/2.2")
+
     xml_add_child(k, w)
 
     invisible(k)

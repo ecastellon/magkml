@@ -138,6 +138,8 @@ es <- map2(col, names(col),
 cc <- c("delega", "tecnico", "control", "departamento", "municipio",
         "local", "finca", "dirfinca", "giro")
 w <- data.frame(name = x$punto,
+                visibility = 0L,
+                open = 0L,
                 coordinates = coord_lista(y) %>% I,
                 ExtendedData = datos_lista(x, cc) %>% I,
                 styleUrl = "#pend")
@@ -155,16 +157,104 @@ dn <- list(delega       = "Delegación",
            dirfinca     = "Dirección",
            giro         = "Giro")
 
+## folder por municipio-departamento
+v <- split(w, x$municipio)
 
-nf <- node_folder(name = "Nueva Segovia", visibility = 1L,
-                  data_pm = filter(w, x$dpt == 5),
+u <- purrr::map2(v, names(v), function(x, y, vis, dis) {
+    node_folder(name = y, data_pm = x, visibility = vis,
+                displayName = dis)
+}, vis = 0L, dis = dn)
+
+mm <- match(names(u), muni$municipio)
+tt <- split(u, muni$departamento[mm])
+
+ss <- map2(tt, names(tt), function(x, y, z) {
+    n <- node_folder(name = y, visibility = z)
+    for (e in x) xml_add_child(n, e)
+    n
+}, z = 0L)
+
+## nf <- node_folder(name = "Nueva Segovia", visibility = 1L,
+##                   data_pm = filter(w, x$dpt == 5),
+##                   displayName = dn)
+
+## -- folder Delegaciones --
+yy <- get_off(y, file = file.path(WD, "deleg.rda"))
+
+xx <- sf::st_drop_geometry(yy)
+
+## resumen de avance de los puntos asignados
+ww <- group_by(x, delega) %>%
+    summarise(asignados     = n(),
+              pendiente     = sum(control == "pendiente"),
+              levantados    = asignados - pendiente,
+              avance        = magest::pct(levantados, asignados),
+              completo      = sum(control == "completo"),
+              incompleto    = sum(control == "incompleto"),
+              noagricola    = sum(control == "no-agrícola"),
+              rechazo       = sum(control == "rechazo"),
+              noinformante  = sum(control == "no-informante"),
+              inaccesible   = sum(control == "inaccesible")) %>%
+    ungroup()
+
+mm <- match(xx$departamento, ww$delega)
+xx %<>% bind_cols(ww[mm,])
+
+## estilos delegaciones
+## color rojo
+## mapa de estilos para estados normal y seleccionado
+s1 <- sty_ico(url = url_google_ico(ico = "icon31"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 0.8)
+
+s2 <- sty_ico(url = url_google_ico(ico = "icon23"),
+              pos = list(x = 0.5, y = 0.5,
+                         xunits = "fraction",
+                         yunits = "fraction"),
+              escala = 1.0)
+
+ed <- list(normal = sty_sty(id = "norm", icon = s1,
+                            label = sty_lab()),
+           selec  = sty_sty(id = "dest", icon = s2,
+                            label = sty_lab()),
+           mapeo  = sty_map(id = "stym", "norm", "dest"))
+
+## folder
+cc <- c("puntos", "asignados", "levantados", "pendiente", "avance",
+        "noagricola", "completo", "incompleto", "rechazo",
+        "noinformante", "inaccesible")
+
+ww <- data.frame(name     = xx$delega,
+                 Snippet  = xx$ciudad,
+                 styleUrl = "#stym",
+                 coordinates = coord_lista(yy) %>% I,
+                 ExtendedData = datos_lista(xx, cc) %>% I)
+
+dn <- list(puntos       = "Puntos-muestra",
+           asignados    = "Puntos-asignados",
+           levantados   = "Boletas-levantadas",
+           pendiente    = "Boletas-pendientes",
+           avance       = "Pct.avance",
+           noagricola   = "UP-no-agrícola",
+           completo     = "Boletas-completa",
+           incompleto   = "Boletas-incompleta",
+           rechazo      = "Boletas-rechazo",
+           noinformante = "Boletas-sin-informante",
+           inaccesible  = "Punto-inaccesible")
+
+nf <- node_folder(name = "Delegaciones", visibility = 1L,
+                  data_pm = ww,
                   displayName = dn)
 
-## folder Delegaciones
-
 ## documento
-km <- kml_doc(estilos = es,
-              folders = list(nf))
+## km <- kml_doc(estilos = es,
+##               folders = list(nf))
+km <- kml_doc(visibility = 0,
+              estilos = c(es, ed),
+              folders = c(list(Delegaciones = nf), ss))
+
 
 write_xml(km, "c:/eddy/code/web/sisea/pun.kml")
 
@@ -190,10 +280,8 @@ s2 <- sty_ico(url = url_google_ico(ico = "icon23"),
                          yunits = "fraction"),
               escala = 1.0)
 
-sb <- sty_lab()
-
-sn <- sty_sty(id = "norm", icon = s1, label = sb)
-sh <- sty_sty(id = "dest", icon = s2, label = sb)
+sn <- sty_sty(id = "norm", icon = s1, label = sty_lab())
+sh <- sty_sty(id = "dest", icon = s2, label = sty_lab())
 sm <- sty_map(id = "stym", "norm", "dest")
 
 x <- coord_lista(y)
