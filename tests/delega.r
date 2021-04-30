@@ -221,6 +221,34 @@ ed <- list(normal = sty_sty(id = "norm", icon = s1,
                             label = sty_lab()),
            mapeo  = sty_map(id = "stym", "norm", "dest"))
 
+## estilos según avance
+## escala lineal del ícono a partir de 0.7 hasta 1.1
+## cada punto en escala corresponde a 20% en avance
+## <=20, 40, 60, 80, >=80
+pa <- c(0, 20, 40, 60, 80, 100)            #pct. avance
+ei <- setNames(c(0.7, 0.8, 0.9, 1.0, 1.1), #escala ícono
+               paste0("p", pa[-1]))
+
+iu <- url_google_ico(ico = "icon31")
+hp = list(x = 0.5, y = 0.5,
+          xunits = "fraction",
+          yunits = "fraction")
+
+ed <- map2(ei, names(ei),
+           function(x, y) {
+               sty_sty(id = y,
+                       icon = sty_ico(escala = x,
+                                      url    = iu,
+                                      pos    = hp,
+                                      color  = "ff0000ff"),
+                       label = sty_lab())
+           })
+
+pa <- setNames(pa, paste0("#", c(names(ei), "p100")))
+
+ia <- findInterval(xx$avance, pa, left.open = TRUE,
+                   rightmost.closed = TRUE)
+
 ## folder
 cc <- c("puntos", "asignados", "levantados", "pendiente", "avance",
         "noagricola", "completo", "incompleto", "rechazo",
@@ -228,7 +256,7 @@ cc <- c("puntos", "asignados", "levantados", "pendiente", "avance",
 
 ww <- data.frame(name     = xx$delega,
                  Snippet  = xx$ciudad,
-                 styleUrl = "#stym",
+                 styleUrl = names(pa)[ia],
                  coordinates = coord_lista(yy) %>% I,
                  ExtendedData = datos_lista(xx, cc) %>% I)
 
@@ -236,7 +264,7 @@ dn <- list(puntos       = "Puntos-muestra",
            asignados    = "Puntos-asignados",
            levantados   = "Boletas-levantadas",
            pendiente    = "Boletas-pendientes",
-           avance       = "Pct.avance",
+           avance       = "<p style='color:#D73027'>Pct.avance</p>",
            noagricola   = "UP-no-agrícola",
            completo     = "Boletas-completa",
            incompleto   = "Boletas-incompleta",
@@ -248,7 +276,13 @@ nf <- node_folder(name = "Delegaciones", visibility = 1L,
                   data_pm = ww,
                   displayName = dn)
 
-## documento
+## doc deleg
+km <- kml_doc(visibility = 0,
+              estilos = ed,
+              folders = list(nf))
+write_xml(km, "c:/eddy/code/web/sisea/del.kml")
+
+## documento puntos + deleg
 ## km <- kml_doc(estilos = es,
 ##               folders = list(nf))
 km <- kml_doc(visibility = 0,
