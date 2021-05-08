@@ -172,8 +172,8 @@ datos_lista <- function(df, vb = character()) {
     if (inherits(df, "sf")) {
         df <- sf::st_drop_geometry(df)
     }
-    
-    x <- purrr::pmap(df[,vb], list)
+
+    x <- purrr::pmap(df[, vb], list)
     invisible(x)
 }
 
@@ -257,11 +257,11 @@ en <- function(x, y) match(x, y, nomatch = 0) > 0
 remplazar <- function(x = NULL, busca, buscaen, remplazo,
                       msg = TRUE, toNA = TRUE) {
     stopifnot(exprs = {
-        "arg. incompat." <- filled(buscaen) && filled(remplazo) &&
+        "arg. incompat." = filled(buscaen) && filled(remplazo) &&
             length(buscaen) == length(remplazo)
-        "arg. incompat." <- filled(busca) &&
+        "arg. incompat." = filled(busca) &&
             mode(busca) == mode(buscaen)
-        "arg. x inadmisible" <- is.null(x) ||
+        "arg. x inadmisible" = is.null(x) ||
             (length(x) == length(busca) &&
                 mode(x) == mode(remplazo))
     })

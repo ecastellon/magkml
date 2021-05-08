@@ -1,17 +1,23 @@
 Package: magkml
-Title: What the Package Does (One Line, Title Case)
+Title: Construir archivos KML
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Eddy",
+           family = "Castellón",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+           email = "eddy.castellon@mag.gob.ni",
+           comment = c(ORCID = ""))
+Description: Funciones para construir los diferentes elementos de un archivo
+    KML, cuando la geometría es Point
 Config/testthat/edition: 3
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+License: MIT
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+Depends:
+        magrittr,
+        xml2
+Imports:
+        purrr,
+        sf

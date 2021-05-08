@@ -21,10 +21,10 @@ node_element <- function(tag = character(), val = "", atr = list(),
     stopifnot("tag inválido" = filled_char(tag),
               "val inválido" = filled_char(val) || filled_num(val),
               "atr inválido" = is.list(atr))
-    
+
     x <- list(val)
     attributes(x) <- atr
-    
+
     x <- structure(list(x), names = tag)
 
     if (as_xml) x <- as_xml_document(x)
@@ -43,7 +43,7 @@ node_element <- function(tag = character(), val = "", atr = list(),
 #'     respecto a las del punto. Estos dos elementos se utilizan para
 #'     construir los elementos "href" y "hotSpot" de los nodos
 #'     IconStyle de los archivos KML.
-#' 
+#'
 #'     El parámetro "ico" es para indicar el tipo (tachuela, raqueta,
 #'     cuadro) y "col" para el color del ícono (rojo, verde, azul,
 #'     amarillo, blanco). Es suficiente pasar como argumento la
@@ -89,19 +89,19 @@ icon_def <- function(ico = "tachuela", col = "blanco") {
                 sep = "/") %>%
           paste("blank-lv.png", sep = "-")) %>%
         matrix(nrow = 3, byrow = TRUE)
-    
+
     hs <- list(c(x = "20",  xunits = "pixels",
                  y = "1",   yunits = "pixels"),
                c(x = "0.5", xunits = "fraction",
                  y = "1",   yunits = "pixels"),
                c(x = "0.5", xunits = "fraction",
                  y = "0.5", yunits = "fraction"))
-    
+
     if (!(is.na(ico) || is.na(col))) {
         icon <- mx[ico, col]
         hspt <- hs[[ico]]
     }
-    
+
     list(url = paste0(urlb, icon),
          pos = hspt)
 }
@@ -148,7 +148,7 @@ sty_ico <- function(..., as_xml = TRUE) {
     }
 
     ## nodo a partir de lista de spec
-    id = ""
+    id <- ""
     if (is.element(id, names(y))) {
         id <- y[["id"]]
     }
@@ -165,7 +165,7 @@ sty_ico <- function(..., as_xml = TRUE) {
                                                xunits = z$pos[["xunits"]],
                                                yunits = z$pos[["yunits"]])
                            )), id = id))
-    
+
     if (as_xml) w <- as_xml_document(w)
     invisible(w)
 }
@@ -196,7 +196,7 @@ sty_lab <- function(..., as_xml = TRUE) {
     }
 
     ## nodo a partir de lista de spec
-    id = ""
+    id <- ""
     if (is.element(id, names(y))) {
         id <- y[["id"]]
     }
@@ -241,7 +241,7 @@ sty_bal <- function(..., as_xml = TRUE) {
     }
 
     ## nodo a partir de lista de spec
-    id = ""
+    id <- ""
     if (is.element(id, names(y))) {
         id <- y[["id"]]
     }
@@ -284,7 +284,7 @@ sty_map <- function(id = character(),
     ## valida inicial
     normal <- paste0("#", sub("[^[:alnum:]]", "", normal))
     destacado <- paste0("#", sub("[^[:alnum:]]", "", destacado))
-                      
+
     w <- list(StyleMap = structure(
                   list(Pair = list(
                            list(key = list("normal"),
@@ -320,7 +320,7 @@ sty_sty <- function(id = character(), icon = NULL,
         "arg. label" = is.null(label) ||
             (inherits(label, "xml_node") &&
              tolower(xml_name(label)) == "labelstyle")
-        
+
         "arg. ball" = is.null(ball) ||
             (inherits(ball, "xml_node") &&
              tolower(xml_name(ball)) == "balloonstyle") })
@@ -331,7 +331,7 @@ sty_sty <- function(id = character(), icon = NULL,
     if (!is.null(icon)) {#chk válido
         xml_add_child(w, icon)
     }
-    
+
     if (!is.null(label)) {
         xml_add_child(w, label)
     }
@@ -400,7 +400,7 @@ node_data <- function(value, data_name, disp_names) {
               "sin atr. name" = filled_char(data_name),
               "display-name" = filled_char(disp_name) ||
                   inherits(disp_name, "xml_cdata"))
-    
+
     x <- node_element("Data", atr = list(name = data_name))
 
     y <- NULL
@@ -416,10 +416,10 @@ node_data <- function(value, data_name, disp_names) {
     if (!is.null(y)) {
         xml_add_child(x, y)
     }
-    
+
     y <- node_element("value", value)
     xml_add_child(x, y)
-    
+
     invisible(x)
 }
 
@@ -451,7 +451,7 @@ node_extended_data <- function(data = list(), dname = list()) {
 
     x <- node_element("ExtendedData")
 
-    d <- map2(data, names(data), node_data, disp_name = dname)
+    d <- purrr::map2(data, names(data), node_data, disp_name = dname)
 
     for (nd in d) xml_add_child(x, nd)
 
@@ -499,36 +499,13 @@ node_placemark <- function(..., id = "") {
     pm <- node_element("Placemark", atr = list(id = id))
 
     if (filled_char(nm)) {
-        z <- walk2(x, names(x),
+        z <- purrr::walk2(x, names(x),
                    function(x, y) {
                        if (y %in% nx) {
                            xml_add_child(pm, node_element(y, x))
                        }
                    })
     }
-    
-    ## if (is.element("name", nx)) {
-    ##     xml_add_child(pm, node_element("name", x$name))
-    ## }
-
-    ## if (is.element("open", nx)) {
-    ##     xml_add_child(pm, node_element("open", x$open))
-    ## }
-
-    ## if (is.element("visibility", nx)) {
-    ##     xml_add_child(pm, node_element("visibility",
-    ##                                    x$visibility))
-    ## }
-
-    ## if (is.element("snippet", nx)) {
-    ##     xml_add_child(pm, node_element("Snippet",
-    ##                                    x$snippet))
-    ## }
-
-    ## if (is.element("style_url", nx)) {
-    ##     xml_add_child(pm, node_element("styleUrl",
-    ##                                    x$style_url))
-    ## }
 
     if (is.element("description", nm)) {
         if (inherits(x$description, "xml_cdata")) {
@@ -621,20 +598,11 @@ node_folder <- function(id = "", data_pm = NULL, displayName = list(),
     ##   y mismos elementos en names_data
     ## construye los place_mark
     if (!is.null(data_pm)) {
-        ## prepara df para placemark
-        ## ii <- names(dpm) %in% coordinates
-        ## names(dpm)[which(ii)] <- c("x", "y")
-        ## ii <- names(dpm) %in% extended_data
-        ## names(dpm)[which(ii)] <- names_data
-        
-        ## dpm["coordinates"] <- pmap(dpm[, coordinates], list)
-        ## dpm["extended_data"] <- pmap(dpm[, names_data], list)
-        
-        pm <- pmap(data_pm, node_placemark,
+        pm <- purrr::pmap(data_pm, node_placemark,
                    displayName = displayName)
-        
+
         if (filled_list(pm)) {
-            for(z in pm) xml_add_child(x, z)
+            for (z in pm) xml_add_child(x, z)
         }
     }
     invisible(x)
@@ -656,7 +624,7 @@ kml_doc <- function(..., estilos = list(), folders = list()) {
     if (filled_list(x)) {
         ## chk character c/u
         nx <- c("name", "open", "visibility", "Snippet")
-        
+
         z <- purrr::walk2(x, names(x), function(x, y) {
             if (y %in% nx) {
                 if (filled_num(x) ||
