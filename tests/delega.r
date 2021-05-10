@@ -184,6 +184,24 @@ yy <- get_off(y, file = file.path(WD, "deleg.rda"))
 xx <- sf::st_drop_geometry(yy)
 
 ## resumen de avance de los puntos asignados
+dd <- group_by(x, delega, municipio) %>%
+    summarise(asignados     = n(),
+              pendiente     = sum(control == "pendiente"),
+              levantados    = asignados - pendiente,
+              avance        = magest::pct(levantados, asignados),
+              completo      = sum(control == "completo"),
+              incompleto    = sum(control == "incompleto"),
+              noagricola    = sum(control == "no-agrícola"),
+              rechazo       = sum(control == "rechazo"),
+              noinformante  = sum(control == "no-informante"),
+              inaccesible   = sum(control == "inaccesible")) %>%
+    ungroup()
+## json para prueba tabla html
+uu <- filter(dd, delega == "Managua") %>%
+select(municipio, asignados, pendiente, levantados) %>%
+jsonlite::toJSON()
+cat(uu, file = "c:/eddy/code/web/sisea/mg.json")
+
 ww <- group_by(x, delega) %>%
     summarise(asignados     = n(),
               pendiente     = sum(control == "pendiente"),
@@ -230,7 +248,7 @@ ei <- setNames(c(0.7, 0.8, 0.9, 1.0, 1.1), #escala ícono
                paste0("p", pa[-1]))
 
 iu <- url_google_ico(ico = "icon31")
-hp = list(x = 0.5, y = 0.5,
+hp <- list(x = 0.5, y = 0.5,
           xunits = "fraction",
           yunits = "fraction")
 
@@ -254,17 +272,17 @@ cc <- c("puntos", "asignados", "levantados", "pendiente", "avance",
         "noagricola", "completo", "incompleto", "rechazo",
         "noinformante", "inaccesible")
 
-ww <- data.frame(name     = xx$delega,
-                 Snippet  = xx$ciudad,
-                 styleUrl = names(pa)[ia],
-                 coordinates = coord_lista(yy) %>% I,
+ww <- data.frame(name         = xx$delega,
+                 Snippet      = xx$ciudad,
+                 styleUrl     = names(pa)[ia],
+                 coordinates  = coord_lista(yy) %>% I,
                  ExtendedData = datos_lista(xx, cc) %>% I)
 
-dn <- list(puntos       = "Puntos-muestra",
+dn <- list(avance       = "<p style='color:#D73027'>Pct.avance</p>",
+           puntos       = "Puntos-muestra",
            asignados    = "Puntos-asignados",
            levantados   = "Boletas-levantadas",
            pendiente    = "Boletas-pendientes",
-           avance       = "<p style='color:#D73027'>Pct.avance</p>",
            noagricola   = "UP-no-agrícola",
            completo     = "Boletas-completa",
            incompleto   = "Boletas-incompleta",
@@ -299,7 +317,7 @@ list_off(file.path(WD, "deleg.rda"))
 read_off(y, file = file.path(WD, "deleg.rda"))
 
 ## names(y)
-## [1] "dpt"          "departamento" "ciudad"   "xutm"  "yutm"        
+## [1] "dpt"          "departamento" "ciudad"   "xutm"  "yutm"
 ## [6] "geometry"     "puntos"       "asignado"
 
 s1 <- sty_ico(url = url_google_ico(ico = "icon31"),
@@ -402,3 +420,7 @@ fufi <- function(...) {
 }
 
 fufi(a=1,b=2,3)
+
+
+a <- data.frame(a = TRUE, b = TRUE)
+cat(jsonlite::toJSON(a))
