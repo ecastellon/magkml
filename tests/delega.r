@@ -110,7 +110,7 @@ x[is.na(x$giro), "giro"] <- "desconocido"
 x["tecnico"] <- remplazar(NULL, x$punto, z$quest, z$tecnico)
 x[is.na(x$tecnico), "tecnico"] <- "desconocido"
 
-## -- datos folder --
+## -- puntos --
 ## estilos íconos
 col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
     extract(c(9, 1, 8, 4, 3, 2)) %>%
@@ -178,7 +178,7 @@ ss <- map2(tt, names(tt), function(x, y, z) {
 ##                   data_pm = filter(w, x$dpt == 5),
 ##                   displayName = dn)
 
-## -- folder Delegaciones --
+## -- Delegaciones --
 yy <- get_off(y, file = file.path(WD, "deleg.rda"))
 
 xx <- sf::st_drop_geometry(yy)
@@ -197,10 +197,10 @@ dd <- group_by(x, delega, municipio) %>%
               inaccesible   = sum(control == "inaccesible")) %>%
     ungroup()
 ## json para prueba tabla html
-uu <- filter(dd, delega == "Managua") %>%
-select(municipio, asignados, pendiente, levantados) %>%
-jsonlite::toJSON()
-cat(uu, file = "c:/eddy/code/web/sisea/mg.json")
+## uu <- filter(dd, delega == "Managua") %>%
+## select(municipio, asignados, pendiente, levantados) %>%
+## jsonlite::toJSON()
+## cat(uu, file = "c:/eddy/code/web/sisea/mg.json")
 
 ww <- group_by(x, delega) %>%
     summarise(asignados     = n(),
@@ -294,12 +294,77 @@ nf <- node_folder(name = "Delegaciones", visibility = 1L,
                   data_pm = ww,
                   displayName = dn)
 
-## doc deleg
+## NOT RUN - KML deleg
 km <- kml_doc(visibility = 0,
               estilos = ed,
               folders = list(nf))
 write_xml(km, "c:/eddy/code/web/sisea/del.kml")
 
+## - resumen nacional -
+fnac <- node_element("Folder")
+xml_add_child(fnac, node_element("open", 1L))
+xml_add_child(fnac, node_element("visibility", 1L))
+
+nd <- sty_sty(id = "sty-nac",
+              icon = sty_ico(url = url_google_ico("shapes",
+                                                  "ranger_station"),
+                             pos = list(x = 0.5, y = 0.5,
+                                        xunits = "fraction",
+                                        yunits = "fraction"),
+                             escala = 1.0,
+                             col = "ff0000ff"),
+              label = sty_lab(escala = 0.8,
+                              color = "FF61AEFD"))
+xml_add_child(fnac, nd)
+
+np <- node_element("Placemark")
+xml_add_child(np, node_element("name", "Nacional"))
+xml_add_child(np, node_element("styleUrl", "#sty-nac"))
+xml_add_child(np, node_element("Snippet", "Resumen nacional"))
+
+ww <- group_by(x, delega) %>%
+    summarise(asignados     = n(),
+              pendiente     = sum(control == "pendiente"),
+              levantados    = asignados - pendiente,
+              avance        = magest::pct(levantados, asignados),
+              completo      = sum(control == "completo"),
+              incompleto    = sum(control == "incompleto"),
+              noagricola    = sum(control == "no-agrícola"),
+              rechazo       = sum(control == "rechazo"),
+              noinformante  = sum(control == "no-informante"),
+              inaccesible   = sum(control == "inaccesible")) %>%
+    ungroup() %>%
+    rename(grupo = delega)
+
+pmt_gauge <- magest::pct(sum(ww$asignados - ww$pendiente),
+                         sum(ww$asignados)) %>%
+    paste0(., ",'", ., "%'")
+
+pmt_tabla <- select(ww, grupo, asignados, levantados, pendiente) %>%
+    jsonlite::toJSON() %>%
+    as.character()
+
+fecha_repo <- "20 de Abril del 2021"
+grupo <- "'delegación'"
+
+ht <- readLines("c:/eddy/code/web/sisea/dele.html") %>%
+    glue::glue_collapse(sep = "\n") %>%
+    glue::glue(.open = "\\{", .close = "\\}")
+
+nd <- node_element("description")
+xml_add_child(nd, xml_cdata(ht))
+xml_add_child(np, nd)
+
+xml_add_child(np, node_point(-85.00, 13.00))
+xml_add_child(fnac, np)
+
+## NOT RUN - KML nacional
+km <- kml_doc(visibility = 0,
+              estilos = list(),
+              folders = list(fnac))
+write_xml(km, "c:/eddy/code/web/sisea/nac.kml")
+
+## -- puntos + deleg + nacional
 ## documento puntos + deleg
 ## km <- kml_doc(estilos = es,
 ##               folders = list(nf))
