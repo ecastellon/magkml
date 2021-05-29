@@ -369,6 +369,27 @@ node_point <- function(x, y) {
     invisible(p)
 }
 
+#' Description
+#' @description Elemento \code{description}
+#' @param x character: la descripción
+#' @param cdata logical: incluir la descripción dentro de un nodo
+#'     CDATA; FALSE por omisión
+#' @export
+#' @examples
+#' node_description("Bla bla Bla")
+#' node_description("<html></html>", cdata = TRUE)
+node_description <- function(x = character(), cdata = FALSE) {
+    stopifnot(filled_char(x) && nzchar(x))
+    if (cdata) {
+        w <- node_element("description")
+        xml_add_child(w, xml_cdata(x))
+    } else {
+        w <- node_element("description", x)
+    }
+
+    invisible(w)
+}
+
 ## disp_names es lista nombrada con el nombre del Data
 ## es pasado como argumento suplementario para evitar
 ## tener que pasarlo en columnas del data.frame con el que
@@ -488,7 +509,7 @@ node_extended_data <- function(data = list(), dname = list()) {
 #' node_placemark(coordinates = list(x = -84.4, y = 10.12),
 #'                ExtendedData = list(area = 3, ciudad = "Ocotal"),
 #'                displayName = list(area = "", ciudad = "Ciudad"))
-node_placemark <- function(..., id = "") {
+node_placemark <- function(...) {
     x <- list(...)
     nm <- names(x)
     nx <- c("name", "open", "visibility", "Snippet", "styleUrl")
@@ -496,7 +517,11 @@ node_placemark <- function(..., id = "") {
     stopifnot("falta nodo" = filled_char(nm),
               "sin coordenadas" = en("coordinates", nm))
 
-    pm <- node_element("Placemark", atr = list(id = id))
+    if (is.element("id", nm)) {
+        pm <- node_element("Placemark", atr = list(id = x$id))
+    } else {
+        pm <- node_element("Placemark")
+    }
 
     if (filled_char(nm)) {
         z <- purrr::walk2(x, names(x),
@@ -508,19 +533,18 @@ node_placemark <- function(..., id = "") {
     }
 
     if (is.element("description", nm)) {
-        if (inherits(x$description, "xml_cdata")) {
-            w <- node_element("description")
-            xml_add_child(w, x$description)
-        } else {
-            if (filled_char(x$description) && nzchar(x$description)) {
-                w <- node_element("description", x$description)
-            } else {
-                w <- character()
-            }
-        }
-
-        if (inherits(w, "xml_node")) {
-            xml_add_child(pm, w)
+        ## if (inherits(x$description, "xml_cdata")) {
+        ##     w <- node_element("description")
+        ##     xml_add_child(w, x$description)
+        ## } else {
+        ##     if (filled_char(x$description) && nzchar(x$description)) {
+        ##         w <- node_element("description", x$description)
+        ##     } else {
+        ##         w <- character()
+        ##     }
+        ## }
+        if (inherits(x$description, "xml_node")) {
+            xml_add_child(pm, x$description)
         }
     }
 
@@ -616,7 +640,8 @@ node_folder <- function(id = "", data_pm = NULL, displayName = list(),
 #'     hijos del elemento Document (name, open, visibility, Snippet)
 #' @return xml_node
 #' @export
-kml_doc <- function(..., estilos = list(), folders = list()) {
+kml_doc <- function(..., estilos = list(), folders = list(),
+                    enc = "UTF-8") {
     x <- list(...)
 
     w <- node_element("Document", atr = list(id = "root"))
@@ -652,7 +677,8 @@ kml_doc <- function(..., estilos = list(), folders = list()) {
     }
 
     k <- xml_new_root("kml",
-                      xmlns = "http://www.opengis.net/kml/2.2")
+                      xmlns = "http://www.opengis.net/kml/2.2",
+                      .encoding = enc)
 
     xml_add_child(k, w)
 
