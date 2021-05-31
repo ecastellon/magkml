@@ -161,19 +161,23 @@ coord_lista <- function(x) {
 #' @description Construye lista cuyos elementos son listas de datos
 #' @details con los datos de algunas variables
 #' @param df data.frame
-#' @param vb character o integer que identifican las columnas del
-#'     data.frame
+#' @param vb character o integer: columnas seleccionadas del
+#'     data.frame. Cuando sin elementos, seleccionadas todas.
 #' @return lista
 #' @export
 datos_lista <- function(df, vb = character()) {
     stopifnot("arg. df inválido" = is.data.frame(df) && nrow(df) > 0,
-              "arg. vb inválido" = filled_char(vb) || filled_num(vb))
+              "arg. vb inválido" = is.character(vb) || is.integer(vb))
 
     if (inherits(df, "sf")) {
         df <- sf::st_drop_geometry(df)
     }
 
-    x <- purrr::pmap(df[, vb], list)
+    if (filled(vb)) {
+        df <- df[, vb]
+    }
+    
+    x <- purrr::pmap(df, list)
     invisible(x)
 }
 

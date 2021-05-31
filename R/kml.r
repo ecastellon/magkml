@@ -369,6 +369,34 @@ node_point <- function(x, y) {
     invisible(p)
 }
 
+#' LookAt
+#' @description Elemento que determina el punto de vista desde el que
+#'     se visualiza al punto
+#' @details Latitud y longitud son las coordenadas del punto; los
+#'     demás nodos hijos comunes a todos los puntos
+#' @param xy lista: latitud (y) y longitud (x)
+#' @param alt integer: altitud
+#' @param rng integer: distancia desde el punto de vista
+#' @param tlt integer: grado de inclinación
+#' @param alm character: referencia altitud; "clampToGround"
+#' @param hdn integer: orientación al norte
+#' @export
+#' @examples
+#' node_look(list(x= -83, y = 13))
+node_look <- function(xy, alt = 500L, rng = 600000L, tlt = 28L,
+                      alm = "clampToGround", hdn = 0L) {
+    nd <- node_element("LookAt")
+    xml_add_child(nd, node_element("latitude", xy$y))
+    xml_add_child(nd, node_element("longitude", xy$x))
+    xml_add_child(nd, node_element("altitudeMode", alm))
+    xml_add_child(nd, node_element("altitude", alt))
+    xml_add_child(nd, node_element("range", rng))
+    xml_add_child(nd, node_element("tilt", tlt))
+    xml_add_child(nd, node_element("heading", hdn))
+    
+    invisible(nd)
+}
+
 #' Description
 #' @description Elemento \code{description}
 #' @param x character: la descripción
@@ -548,6 +576,12 @@ node_placemark <- function(...) {
         }
     }
 
+    if (is.element("LookAt", nm)) {
+        if (inherits(x$LookAt, "xml_node")) {
+            xml_add_child(pm, x$LookAt)
+        }
+    }
+
     if (is.element("ExtendedData", nm)) {
         ## tiene que estar displayName; si no, list() e igual num. elem.
         ## xd <- lapply(names(x$extended_data), function(x){
@@ -601,7 +635,7 @@ node_placemark <- function(...) {
 #' @return xml_node
 #' @export
 #' @examples
-node_folder <- function(id = "", data_pm = NULL, displayName = list(),
+node_folder_x <- function(id = "", data_pm = NULL, displayName = list(),
                         name = "", open = 0L,
                         visibility = 0L, Snippet = "") {
 
@@ -630,6 +664,48 @@ node_folder <- function(id = "", data_pm = NULL, displayName = list(),
         }
     }
     invisible(x)
+}
+
+#' Folder node
+#' @description Construye elemento Folder
+#' @details Ver documentación oficial de KML. Orden de los parámetros
+#'     facilita usar purrr::imap con una lista.
+#' @seealso node_placemark, node_data
+#' @param children list: lista de nodos hijos; e.g. placemark
+#' @param name character: nombre del folder
+#' @param ... puede incluir atributo id, open, visibility, Snippet,
+#'     styleUrl, description
+#' @return xml_node
+#' @export
+#' @examples
+node_folder <- function(children = list(), name = character(), ...) {
+    x <- list(...)
+    nm <- names(x)
+
+    ## hijos admisibles; especificaciones incluye ExtendedData y otros
+    nx <- c("open", "visibility", "Snippet", "styleUrl",
+            "description")
+
+    nf <- node_element("Folder")
+    if (filled_char(nm)) {
+        if (is.element("id", nm)) {
+            xml_set_attr(nf, "id", x$id)
+        }
+
+        w <- purrr::iwalk(x, function(z, y) {
+            if (is.element(y, nx)) {
+                xml_add_child(nf, node_element(y, z))
+            }
+        })
+    }
+    
+    if (filled_list(children)) {
+        for (w in children) { #chk es xml_node?
+            xml_add_child(nf, w)
+        }
+    }
+
+    invisible(nf)
 }
 
 #' KML document
