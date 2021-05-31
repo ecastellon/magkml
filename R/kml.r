@@ -687,6 +687,7 @@ node_folder <- function(children = list(), name = character(), ...) {
             "description")
 
     nf <- node_element("Folder")
+    xml_add_child(nf, node_element("name", name))
     if (filled_char(nm)) {
         if (is.element("id", nm)) {
             xml_set_attr(nf, "id", x$id)
