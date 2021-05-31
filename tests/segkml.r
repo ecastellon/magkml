@@ -76,8 +76,7 @@ er <- estilos_resumen()
 
 km <- kml_resumen_nac(pd, pn,
                       es = er,
-                      file.path("c:/eddy/code/web/sisea",
-                                "ava-del.kml"))
+                      file.path(WK, "ava-del.kml"))
 
 ## --- resumen delegación y puntos delegación ---
 
@@ -90,27 +89,28 @@ km <- kml_resumen_nac(pd, pn,
 
 #' prepara los datos de los puntos
 
+#' href de estilos de los puntos
+ep <- estilos_puntos()
+hr <- paste0("#", names(ep))
+hr <- match_sustituir(x$punto, z$quest, hr[z$c5000], si_na = "#pend")
+
+#' estilos de punto y delegación
+es <- c(er["del"], ep)
+
+#' LookAt
+xy <- coord_lista(pun)
+nk <- lapply(xy, node_look, alt = 100L, rng = 1000L, tlt = 13L)
+
+#' description ??
+
+#' variables que se visualizarán en "balloon"
+#' delegación es departamento al que está asignado adm. el punto
+#' departamento y municipio es donde ubicada la UP
+
 cc <- c("delegacion", "tecnico", "control", "departamento", "municipio",
         "localidad", "finca", "dirfinca", "giro")
 
-#' nombres de colores puntos para href estilo
-ss <- c("comp", "noag", "inco", "noen", "rech", "inac", "pend")
-
-#' falta description si foto
-
-xy <- coord_lista(pun)
-nt <- lapply(xy, node_look, alt = 100L, rng = 1000L, tlt = 13L)
-
-w <- data.frame(name = x$punto,
-                municipio = x$municipio,
-                visibility = 1L,
-                styleUrl = "#pend",
-                ExtendedData = datos_lista(x, cc) %>% I,
-                LookAt = I(nt),
-                coordinates = I(xy))
-
-hr <- paste0("#", ss)
-w["styleUrl"] <- remplazar(w$styleUrl, w$name, z$quest, hr[z$c5000])
+#' displayName
 
 dn <- list(delegacion   = "Delegación",
            tecnico      = "Técnico",
@@ -122,35 +122,24 @@ dn <- list(delegacion   = "Delegación",
            dirfinca     = "Dirección",
            giro         = "Giro")
 
-## folder puntos
+w <- data.frame(name         = x$punto,
+                delegacion   = x$delegacion, #split
+                municipio    = x$municipio,  #split
+                visibility   = 1L,
+                styleUrl     = hr,
+                ExtendedData = datos_lista(x, cc) %>% I,
+                LookAt       = I(nk),
+                coordinates  = I(xy))
 
-## folder delegación
+## alinear pd en orden con split(w, delegaciones)
+## lista de nombres de archivos en mismo orden
+## usar pmap para generar todos los archivos
+
+#' !! prueba
 aa <- filter(w, x$dpt == 70)
 
-## names(aa)
-## bb <- split(aa, aa$municipio)
-## names(bb)
-
-## y <- purrr::imap(bb, folder_puntos, disp=dn)
-
-
-es <- c(er["del"], estilos_puntos())
 fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
-                        file = file.path("c:/eddy/code/web/sisea",
-                                         "granada.kml"),
+                        file = file.path(WK, "granada.kml"),
                         display = dn,
                         estilos = es, visibility = 1L)
-
-## kk <- kml_doc(estilos = estilos_puntos(),
-##               folders = list(fc))
-
-## write_xml(kk, file.path("c:/eddy/code/web/sisea",
-##                         "granada.kml"), encoding = "UTF-8")
-
-v <- split(w, x$municipio)
-
-u <- purrr::map2(v, names(v), function(x, y, vis, dis) {
-    node_folder(name = y, data_pm = x, visibility = vis,
-                displayName = dis)
-}, vis = 0L, dis = dn)
 
