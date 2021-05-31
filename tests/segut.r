@@ -338,29 +338,29 @@ estilos_puntos <- function() {
 #' @return list
 estilos_resumen <- function() {
 
-    es <- list(sty_sty(id = "sty-nac",
-                       icon = sty_ico(url = url_google_ico("shapes",
-                                                           "ranger_station"),
-                                      pos = list(x = 0.5, y = 0.5,
-                                                 xunits = "fraction",
-                                                 yunits = "fraction"),
-                                      escala = 1.0,
-                                      color = "ff0000ff"),
-                       label = sty_lab(escala = 0.8,
-                                       color = "FF61AEFD"),
-                       ball  = sty_bal(texto = "$[description]")),
+    es <- list(nac = sty_sty(id = "sty-nac",
+                             icon = sty_ico(url = url_google_ico("shapes",
+                                                                 "ranger_station"),
+                                            pos = list(x = 0.5, y = 0.5,
+                                                       xunits = "fraction",
+                                                       yunits = "fraction"),
+                                            escala = 1.0,
+                                            color = "ff0000ff"),
+                             label = sty_lab(escala = 0.8,
+                                             color = "FF61AEFD"),
+                             ball  = sty_bal(texto = "$[description]")),
 
-               sty_sty(id = "sty-del",
-                       icon = sty_ico(url = url_google_ico("pal3",
-                                                           "icon31"),
-                                      pos = list(x = 0.5, y = 0.5,
-                                                 xunits = "fraction",
-                                                 yunits = "fraction"),
-                                      escala = 1.0,
-                                      color = "ff0000ff"),
-                       label = sty_lab(escala = 0.8,
-                                       color = "FF61AEFD"),
-                       ball  = sty_bal(texto = "$[description]"))
+               del = sty_sty(id = "sty-del",
+                             icon = sty_ico(url = url_google_ico("pal3",
+                                                                 "icon31"),
+                                            pos = list(x = 0.5, y = 0.5,
+                                                       xunits = "fraction",
+                                                       yunits = "fraction"),
+                                            escala = 1.0,
+                                            color = "ff0000ff"),
+                             label = sty_lab(escala = 0.8,
+                                             color = "FF61AEFD"),
+                             ball  = sty_bal(texto = "$[description]"))
                )
     
     invisible(es)

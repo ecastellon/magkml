@@ -72,9 +72,10 @@ x["giro"] <- match_sustituir(x$punto, z$quest, z$giro,
 pd <- nodos_delegaciones(x)
 
 pn <- nodo_nacional(x)
+er <- estilos_resumen()
 
 km <- kml_resumen_nac(pd, pn,
-                      es = estilos_resumen(),
+                      es = er,
                       file.path("c:/eddy/code/web/sisea",
                                 "ava-del.kml"))
 
@@ -124,24 +125,27 @@ dn <- list(delegacion   = "Delegación",
 ## folder puntos
 
 ## folder delegación
-aa <- filter(w, x$dpt == 75)
+aa <- filter(w, x$dpt == 70)
 
-names(aa)
-bb <- split(aa, aa$municipio)
-names(bb)
+## names(aa)
+## bb <- split(aa, aa$municipio)
+## names(bb)
 
-y <- purrr::imap(bb, folder_puntos, disp=dn)
+## y <- purrr::imap(bb, folder_puntos, disp=dn)
 
 
+es <- c(er["del"], estilos_puntos())
+fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
+                        file = file.path("c:/eddy/code/web/sisea",
+                                         "granada.kml"),
+                        display = dn,
+                        estilos = es, visibility = 1L)
 
-fc <- folder_delegacion(aa, "Carazo", pd[["CZ"]], display = dn,
-                        estilos = estilos_puntos(), visibility = 1L)
+## kk <- kml_doc(estilos = estilos_puntos(),
+##               folders = list(fc))
 
-kk <- kml_doc(estilos = estilos_puntos(),
-              folders = list(fc))
-
-write_xml(kk, file.path("c:/eddy/code/web/sisea",
-                        "carazo.kml"), encoding = "UTF-8")
+## write_xml(kk, file.path("c:/eddy/code/web/sisea",
+##                         "granada.kml"), encoding = "UTF-8")
 
 v <- split(w, x$municipio)
 
