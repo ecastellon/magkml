@@ -220,8 +220,10 @@ datos_puntos <- function(z, x) {
 #' @description Nodos placemar delegaciones
 #' @details
 #' @param x data.frame: Datos de los puntos para calcular avance
+#' @param ht character: plantilla html ("html_del" o "html_del2")
+#' @param por_mun logical: resumen por municipio? (TRUE por omisión)
 #' @return list
-nodos_delegaciones <- function(x) {
+nodos_delegaciones <- function(x, ht = "html_del", por_mun = TRUE) {
     ## la tabla de avance en los nodos delegación puede ser por municipio
     ## o por técnico. (Falta ver cómo se puede filtrar en DataTables para
     ## tener una sola tabla con filtro municipio/técnico)
@@ -240,7 +242,7 @@ nodos_delegaciones <- function(x) {
         rename(grupo = municipio)
 
     nd <- split(w, w$delegacion) %>%
-        lapply(descripcion_avance, html = "html_del", grupo = "municipio")
+        lapply(descripcion_avance, html = ht, grupo = "municipio")
 
     y <- get_off("coor_del", file = KML)
     mm <- match(names(nd), y$departamento)
@@ -364,6 +366,15 @@ estilos_resumen <- function() {
                )
     
     invisible(es)
+}
+
+#' Estilos puntos y delegación
+#' @description Los estilos de la delegación y los de los puntos
+#' @return list
+estilos_puntos_dele <- function() {
+    er <- estilos_resumen()
+    ep <- estilos_puntos()
+    c(er["del"], ep)
 }
 
 #' KML-nacional

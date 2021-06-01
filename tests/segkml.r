@@ -16,6 +16,7 @@ cam <-  c("quest", "c5000", "copiade", "nombreproductor", "c002",
           "dir_productor", "c004", "c005", "name_expagrp",
           "ciudadfinca", "ptoreffinca", "dir_explagrop", "nombretec")
 
+#' leer de base de datos SQL
 z <- datos_directorio(cam)
 
 y <- datos_complementarios() #!!! a conveniencia
@@ -90,14 +91,12 @@ km <- kml_resumen_nac(pd, pn,
 #' prepara los datos de los puntos
 
 #' href de estilos de los puntos
-ep <- estilos_puntos()
-hr <- paste0("#", names(ep))
+
+es <- estilos_puntos_dele()
+hr <- paste0("#", names(es)[-1])
 hr <- match_sustituir(x$punto, z$quest, hr[z$c5000], si_na = "#pend")
 
-#' estilos de punto y delegación
-es <- c(er["del"], ep)
-
-#' LookAt
+#' LookAt: punto de vista cuando se visualice el punto
 xy <- coord_lista(pun)
 nk <- lapply(xy, node_look, alt = 100L, rng = 1000L, tlt = 13L)
 
@@ -123,7 +122,6 @@ dn <- list(delegacion   = "Delegación",
            giro         = "Giro")
 
 w <- data.frame(name         = x$punto,
-                delegacion   = x$delegacion, #split
                 municipio    = x$municipio,  #split
                 visibility   = 1L,
                 styleUrl     = hr,
@@ -132,14 +130,23 @@ w <- data.frame(name         = x$punto,
                 coordinates  = I(xy))
 
 ## alinear pd en orden con split(w, delegaciones)
+## (aparentemente no hay necesidad porque orden alfabético)
 ## lista de nombres de archivos en mismo orden
 ## usar pmap para generar todos los archivos
 
 #' !! prueba
-aa <- filter(w, x$dpt == 70)
+pd <- nodos_delegaciones(x, "html_del2", por_mun = TRUE)
+
+ww <- split(w, x$delegacion)
+aa <- ww[["Granada"]]
 
 fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
                         file = file.path(WK, "granada.kml"),
                         display = dn,
                         estilos = es, visibility = 1L)
 
+ff <- lapply(paste0(names(ww), ".kml"),
+             function(x) file.path(WK, x))
+
+purrr::pwalk(list(ww, names(ww), pd, ff), folder_delegacion,
+             display = dn, estilos = es, visibility = 1L)
