@@ -1,5 +1,59 @@
 # -*- encoding: utf-8 -*-
 
+## especificaciones
+## - Document
+##   name: nombre de encuesta; e.g. "Seguimiento, marzo"
+##   Snippet: fecha reporte; e.g. "15 de marzo"
+##   visibility: 0
+##   open: 0
+## - Folder delegaciones
+##   name: "delegaciones"
+##   Snippet: nada
+##   open: 0
+##   visibility: 0
+##   - Placemark
+##     - ExtendedData
+##       - Data
+##         puntos asignados
+##         puntos visitados
+##         porcentaje visitados
+##         técnico: puntos visitados
+##     - description
+##       - CDATA
+##         los datos en nodo Data
+##         gráfica de código de control
+##         gráfica maptree(?)
+##         foto tropa
+## - Folder departamento
+##   name: nombre departamento
+##   Snippet: nada
+##   open: 0
+##   visibility: 0
+## - Folder municipio
+##   name: nombre municipio
+##   Snippet: nada
+##   open: 0
+##   visibility: 0
+##   - Placemark
+##     name: punto
+##     Snippet: nombre del técnico
+##     visibility: 1
+##     open: 1
+##     - ExtendedData
+##       - Data
+##         técnico
+##         departamento
+##         municipio
+##         localidad
+##         nombre finca
+##         dirección finca
+##     - description
+##       - CDATA
+##         los datos en nodos Data
+##         foto
+##     - Point
+##       - coordinates
+
 library(magest)
 
 #' Mes-encuesta
@@ -304,18 +358,32 @@ nodo_nacional <- function(x) {
     invisible(pn)
 }
 
-#' Estilos-puntos
-#' @description Estilos de los puntos según control de cuestionario
-#' @return list
-estilos_puntos <- function() {
-    nom <- c("comp", "noag", "inco", "noen", "rech", "inac", "pend")
-
-    col <- RColorBrewer::brewer.pal(10, "RdYlGn") %>%
+#' Color puntos
+#' @description Los colores asignados al control de cuestionario
+#' @param id_color_p character: id asignados a los colores
+#' @return character
+color_control_cuestionario <- function(id_color_p) {
+    RColorBrewer::brewer.pal(10, "RdYlGn") %>%
         extract(c(9, 1, 8, 4, 3, 2)) %>%
         vapply(BGR, "") %>%
-        c("FFFFFF") %>%
+        c("FFFFFF") %>%     #"pendiente": color blanco
         paste0("FF", .) %>%
-        set_names(nom)
+        set_names(id_color_p)
+}
+
+#' Estilos-puntos
+#' @description Estilos de los puntos según control de cuestionario
+#' @param id_color_p character: id de los colores
+#' @return list
+estilos_puntos <- function(ico = "raqueta", colico = "blanco",
+                           id_color_p = character()) {
+
+    if (!filled_char(id_color_p)) {
+        id_color_p <- c("comp", "noag", "inco", "noen", "rech",
+                        "inac", "pend")
+    }
+
+    col <- color_control_cuestionario(id_color_p)
 
     ## estilo labels
     sb <- sty_lab(escala = 0.8,
@@ -324,8 +392,8 @@ estilos_puntos <- function() {
     es <- map2(col, names(col),
                function(x, y, z) {
                    sty_sty(id = y,
-                           icon = sty_ico(ico = "raq",
-                                          col = "blanco",
+                           icon = sty_ico(ico = ico,
+                                          col = colico,
                                           escala = 1.0,
                                           color = x),
                            label = z)

@@ -138,12 +138,12 @@ w <- data.frame(name         = x$punto,
 pd <- nodos_delegaciones(x, "html_del2", por_mun = TRUE)
 
 ww <- split(w, x$delegacion)
-aa <- ww[["Granada"]]
+## aa <- ww[["Granada"]]
 
-fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
-                        file = file.path(WK, "granada.kml"),
-                        display = dn,
-                        estilos = es, visibility = 1L)
+## fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
+##                         file = file.path(WK, "granada.kml"),
+##                         display = dn,
+##                         estilos = es, visibility = 1L)
 
 ff <- lapply(paste0(names(ww), ".kml"),
              function(x) file.path(WK, x))
