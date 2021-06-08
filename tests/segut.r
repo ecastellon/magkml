@@ -102,6 +102,27 @@ nombre_propio <- function(x) {
     dejar_un_espacio(x) %>% a_propio()
 }
 
+#' @description Guardar plantilla html
+#' @details Lee un archivo html, le asigna metadatos y lo almacena en
+#'     un archivo R
+#' @param html character: archivo html
+#' @param plan character: nombre del objeto con el que se almacena en
+#'     archivo de objetos R
+#' @param meta character: metadatos de la plantilla
+#' @param kml character: archivo donde almacenará la plantilla
+#' @return nada
+plantilla_html <- function(html, plan, meta = "", kml = KML) {
+    stop("NOT-RUN")
+    x <- readLines(html) %>%
+        glue::glue_collapse()
+
+    if ( nzchar(meta) ) {
+        meta(x) <- meta
+    }
+    
+    add_tof(x, file = kml)
+}
+
 #' href delegación
 #' @description Construye la hyper referencia a las delegaciones
 #' @details Utiliza la abreviatura del departamento registrada en la
@@ -326,7 +347,10 @@ nodos_delegaciones <- function(x, ht = "html_del", por_mun = TRUE) {
 #' @description Placemark del nodo resumen nacional
 #' @details
 #' @param x data.frame: datos del avance
-nodo_nacional <- function(x) {
+#' @param ht character: plantilla html
+#' @param lon numeric: longitud placemark nacional
+#' @param lat numeric: latitud placemark nacional
+nodo_nacional <- function(x, ht, lon = -85.0, lat = 13.0) {
     w <- group_by(x, delegacion) %>%
         summarise(asignados     = n(),
                   pendiente     = sum(control == "pendiente"),
@@ -349,11 +373,11 @@ nodo_nacional <- function(x) {
 
     pn <- node_placemark(name = "Nacional", styleUrl = "#sty-nac",
                          Snippet = "Resumen nacional",
-                         description = descripcion_avance(w, "html_nac",
+                         description = descripcion_avance(w, ht,
                                                           "delegación"),
-                         LookAt = node_look(list(x = -85.00, y = 13.00),
+                         LookAt = node_look(list(x = lon, y = lat),
                                             tlt = 13L),
-                         coordinates = list(x = -85.00, y = 13.00),
+                         coordinates = list(x = lon, y = lat),
                          id = "NI")
     invisible(pn)
 }

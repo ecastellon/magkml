@@ -70,7 +70,7 @@ x["giro"] <- match_sustituir(x$punto, z$quest, z$giro,
 ## folder cuyos placemark son las delegaciones
 ## más el placemark "nacional"
 
-pd <- nodos_delegaciones(x)
+pd <- nodos_delegaciones(x, "html_del")
 
 pn <- nodo_nacional(x)
 er <- estilos_resumen()
