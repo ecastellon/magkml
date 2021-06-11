@@ -427,7 +427,7 @@ node_description <- function(x = character(), cdata = FALSE) {
 #' @description Construye elemento Data
 #' @details Ver capítulo "Datos personalizados" en la documentación
 #'     oficial. Un elemento Data necesariamente tiene un nodo hijo
-#'     (<value></value>) con el valor del dato, y de manera opcional
+#'     ("<value></value>"") con el valor del dato, y de manera opcional
 #'     un nodo displayName. El parámetro disp_names es una lista con
 #'     nombres igual a los atributos names de los diferentes elementos
 #'     Data que pueden estar contenidos en un nodo ExtendedData. El
@@ -528,7 +528,7 @@ node_extended_data <- function(data = list(), dname = list()) {
 #'     asociado a este, el parámetro display_name es una lista con los
 #'     valores del elemento displayName.
 #' @seealso node_data, node_extended_data
-#' @param ...
+#' @param ... listas
 #' @param id character o numeric: valor del atributo id de Placemark
 #' @return xml_node
 #' @export
@@ -634,7 +634,6 @@ node_placemark <- function(...) {
 #'     displayName del elemento Data (opcional)
 #' @return xml_node
 #' @export
-#' @examples
 node_folder_x <- function(id = "", data_pm = NULL, displayName = list(),
                         name = "", open = 0L,
                         visibility = 0L, Snippet = "") {
@@ -677,7 +676,6 @@ node_folder_x <- function(id = "", data_pm = NULL, displayName = list(),
 #'     styleUrl, description
 #' @return xml_node
 #' @export
-#' @examples
 node_folder <- function(children = list(), name = character(), ...) {
     x <- list(...)
     nm <- names(x)

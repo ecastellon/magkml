@@ -71,8 +71,7 @@ x["giro"] <- match_sustituir(x$punto, z$quest, z$giro,
 ## más el placemark "nacional"
 
 pd <- nodos_delegaciones(x, "html_del")
-
-pn <- nodo_nacional(x)
+pn <- nodo_nacional(x, "html_nac")
 er <- estilos_resumen()
 
 km <- kml_resumen_nac(pd, pn,
@@ -133,20 +132,18 @@ w <- data.frame(name         = x$punto,
 ## (aparentemente no hay necesidad porque orden alfabético)
 ## lista de nombres de archivos en mismo orden
 ## usar pmap para generar todos los archivos
-
+tic()
+plan(multisession, workers = 4)
 #' !! prueba
 pd <- nodos_delegaciones(x, "html_del2", por_mun = TRUE)
-
 ww <- split(w, x$delegacion)
 ## aa <- ww[["Granada"]]
-
 ## fc <- folder_delegacion(aa, "Granada", pd[["GR"]],
 ##                         file = file.path(WK, "granada.kml"),
 ##                         display = dn,
 ##                         estilos = es, visibility = 1L)
-
 ff <- lapply(paste0(names(ww), ".kml"),
              function(x) file.path(WK, x))
-
-purrr::pwalk(list(ww, names(ww), pd, ff), folder_delegacion,
+furrr::future_pwalk(list(ww, names(ww), pd, ff), folder_delegacion,
              display = dn, estilos = es, visibility = 1L)
+toc()
