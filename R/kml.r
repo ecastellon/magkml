@@ -2,12 +2,18 @@
 
 ## -- crear archivos kml --
 
+## node_element("table", atr = list(class = "aja") no produce
+## nodo con atributo class. Ha de ser porque as_xml_document
+## redefine atributo a xml_document xml_node y descarta la
+## asignación inicial
+## u <- read_xml("<table class = 'aja' />") produce lo esperado
+
 #' Elemento
 #' @description Construye un elemento XML
 #' @details No valida la gramática del nombre del elemento
 #' @param tag character: nombre del elemento
 #' @param val character o numeric: valor del elemento
-#' @param atr lista: lista de con los atributos
+#' @param atr lista: lista con los atributos
 #' @param as_xml logical: devuelve lista u objeto xml_node (TRUE
 #'     por omisión)
 #' @return lista u objeto xml_node
@@ -758,4 +764,73 @@ kml_doc <- function(..., estilos = list(), folders = list(),
     xml_add_child(k, w)
 
     invisible(k)
+}
+
+#' Html-table
+#' @description Construye tabla html simple
+#' @param df data.frame: el cuerpo de la tabla
+#' @param atrs list: lista de atributos
+#' @param head character: encabezado de la tabla
+#' @param foot character: pie de la tabla
+#' @return character
+#' @export
+make_table <- function(df, atrs = list(), cab = character(),
+                       foot = character()) {
+    ## -- valida
+    
+    nt <- node_element("table", atr = atrs) %>%
+        xml_find_first("//table")
+
+    ## ver nota antes de node_element
+    if (is.element("class", names(atrs))) {
+        xml_attr(nt, "class") <- atrs$class
+    }
+
+    ## -- alineación: numeric, derecha; character, izquierda
+    an <- sapply(df, is.character)
+    x <- rep("text-align:right", length(df))
+    x[an] <- "text-align:left"
+
+    ## ss <- sprintf("%s%s%s", "<col style='", x, "'>")
+    ## nc <- node_element("colgroup", paste(ss, collapse = ""))
+
+    nc <- node_element("colgroup")
+    for ( n in seq_along(x) ) {
+        xml_add_child(nc, node_element("col",
+                                       atr = list(style = x[n])))
+    }
+    
+    xml_add_child(nt, nc)
+
+    ## -- header
+    if ( length(cab) > 0 ) {
+        nr <- node_element("tr")
+        purrr::walk(cab, function(x) {
+            xml_add_child(nr, node_element("th", x))
+        })
+        
+        nc <- node_element("thead")
+        xml_add_child(nc, nr)
+        xml_add_child(nt, nc)
+    }
+
+    ## -- body
+    nr <- purrr::pmap(df, function(...) {
+        z <- list(...)
+        nr <- node_element("tr")
+        purrr::walk(z, function(x) {
+            xml_add_child(nr, node_element("td", x))
+        })
+        nr
+    })
+
+    nc <- node_element("tbody")
+    purrr::walk(nr, function(x) xml_add_child(nc, x))
+    xml_add_child(nt, nc)
+
+    ## !!! -- footer
+    if ( length(foot) > 0 ) {
+    }
+    
+    invisible(as.character(nt))
 }
