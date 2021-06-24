@@ -61,7 +61,7 @@ node_element <- function(tag = character(), val = "", atr = list(),
 #' @param col character: el color del ícono
 #' @return list con "url" y "pos" para construir los elementos href y
 #'     hotSpot de los nodos StyleIcon de los archivos KML
-#' @keywords internal
+#' @export
 #' @examples
 #' icon_def(col = "az") #tachuela color azul
 #' icon_def("r", "am")  #raqueta color amarillo
