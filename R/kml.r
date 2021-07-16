@@ -176,6 +176,23 @@ sty_ico <- function(..., as_xml = TRUE) {
     invisible(w)
 }
 
+#' cambiar-color-estilo
+#' @description Modifica el color de un estilo de ícono
+#' @param x xml_node: estilo de ícono
+#' @param color character: color sustituto, en el formato que se
+#'     utiliza en KML
+#' @export
+#' @examples
+#' cambiar_color_ico(sty_ico, "ffff0000")
+cambiar_color_ico <- function(x, color = character()) {
+    ## ÔjÔ debería saber que es IconStyle
+    stopifnot("arg. x inválido" = inherits(x, "xml_node"))
+    
+    y <- node_element("color", color)
+    z <- xml_find_all(x, "//color")
+    invisible(xml_replace(z, y))
+}
+
 #' LabelStyle
 #' @description Elemento LabelStyle
 #' @details Estilo para el nombre del punto en el mapa

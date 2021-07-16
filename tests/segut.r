@@ -310,7 +310,7 @@ plantilla_html <- function(html, plan, meta = "", kml = KML) {
 #'     base de datos de departamentos
 #' @param x character: nombre delegación (departamento)
 #' @param sufijo character: sufijo específico de KML
-#' @examples heref_deleg("Boaco") #-> "#BO;balloon"
+#' @examples href_deleg("Boaco") #-> "#BO;balloon"
 href_delegacion <- function(x, sufijo = "") {
     mm <- match(x, dpto$departamento)
     paste0("#", dpto$abr[mm], sufijo, x)
