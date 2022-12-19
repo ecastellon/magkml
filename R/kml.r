@@ -187,7 +187,7 @@ sty_ico <- function(..., as_xml = TRUE) {
 cambiar_color_ico <- function(x, color = character()) {
     ## ÔjÔ debería saber que es IconStyle
     stopifnot("arg. x inválido" = inherits(x, "xml_node"))
-    
+
     y <- node_element("color", color)
     z <- xml_find_all(x, "//color")
     invisible(xml_replace(z, y))
@@ -416,7 +416,7 @@ node_look <- function(xy, alt = 500L, rng = 600000L, tlt = 28L,
     xml_add_child(nd, node_element("range", rng))
     xml_add_child(nd, node_element("tilt", tlt))
     xml_add_child(nd, node_element("heading", hdn))
-    
+
     invisible(nd)
 }
 
@@ -720,7 +720,7 @@ node_folder <- function(children = list(), name = character(), ...) {
             }
         })
     }
-    
+
     if (filled_list(children)) {
         for (w in children) { #chk es xml_node?
             xml_add_child(nf, w)
@@ -794,7 +794,7 @@ kml_doc <- function(..., estilos = list(), folders = list(),
 make_table <- function(df, atrs = list(), cab = character(),
                        foot = character()) {
     ## -- valida
-    
+
     nt <- node_element("table", atr = atrs) %>%
         xml_find_first("//table")
 
@@ -816,7 +816,7 @@ make_table <- function(df, atrs = list(), cab = character(),
         xml_add_child(nc, node_element("col",
                                        atr = list(style = x[n])))
     }
-    
+
     xml_add_child(nt, nc)
 
     ## -- header
@@ -825,7 +825,7 @@ make_table <- function(df, atrs = list(), cab = character(),
         purrr::walk(cab, function(x) {
             xml_add_child(nr, node_element("th", x))
         })
-        
+
         nc <- node_element("thead")
         xml_add_child(nc, nr)
         xml_add_child(nt, nc)
@@ -848,6 +848,6 @@ make_table <- function(df, atrs = list(), cab = character(),
     ## !!! -- footer
     if ( length(foot) > 0 ) {
     }
-    
+
     invisible(as.character(nt))
 }
